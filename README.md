@@ -6,12 +6,16 @@
 [![JSDocs][jsdocs-src]][jsdocs-href]
 [![License][license-src]][license-href]
 
-A CLI that discovers [agent skills](https://agentskills.io) shipped inside npm packages and creates symlinks for coding agents (Cursor, Claude Code, Codex, etc.) to consume.
+A CLI that discovers [agent skills](https://agentskills.io) shipped inside npm packages and creates symlinks for coding agents to consume.
+
+> [!IMPORTANT]
+> This project is a work in progress.
 
 ## Why?
 
-Current skill distribution approaches have friction:
+Current skill distribution approaches (e.g. [`@vercel-labs/skills`](https://github.com/vercel-labs/skills)) have friction:
 
+- **Git-only source** - Only supports git repos as skills source
 - **Version mismatch** - Skills and tools update separately, causing compatibility issues
 - **Manual management** - Cloning skills from git repos requires extra steps per project
 - **Sharing overhead** - Teams must commit cloned files or repeat setup on each machine
@@ -37,6 +41,12 @@ Add a `prepare` script to your `package.json` so the skills are symlinked automa
 }
 ```
 
+`skills-npm` will symbol links the skills from `node_modules` to `skills/npm-<package-name>-<skill-name>` for your agent. It's recommend to add the following to your `.gitignore`:
+
+```
+skills/npm-*
+```
+
 ## For Package Authors
 
 Include a `skills/` directory in your package:
@@ -51,6 +61,12 @@ my-tool/
 ```
 
 See [PROPOSAL.md](./PROPOSAL.md#for-package-authors) for detailed instructions.
+
+## Showcases
+
+Packages that ships their built-in skills:
+
+- [`@slidev/cli`](https://github.com/slidevjs/slidev)
 
 ## Sponsors
 

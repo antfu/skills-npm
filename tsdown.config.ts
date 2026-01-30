@@ -8,4 +8,6 @@ export default defineConfig({
   dts: true,
   exports: true,
   publint: true,
+  // Bundle vendor code from submodule
+  noExternal: [/vendor\/skills/],
 })

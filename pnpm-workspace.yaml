@@ -10,27 +10,37 @@ packages:
   - examples/*
 
 catalogs:
-  cli:
-    '@antfu/eslint-config': ^6.6.1
-    '@antfu/ni': ^28.0.0
-    bumpp: ^10.3.2
+  # Build & development tools
+  dev:
+    '@antfu/eslint-config': ^7.2.0
+    '@antfu/ni': ^28.2.0
+    bumpp: ^10.4.0
     eslint: ^9.39.2
     lint-staged: ^16.2.7
-    publint: ^0.3.16
+    publint: ^0.3.17
     simple-git-hooks: ^2.13.1
     tsdown: ^0.17.3
     tsx: ^4.21.0
     typescript: ^5.9.3
-    vite: ^7.2.7
+    vite: ^7.3.1
+  # Inlined utilities
   inlined:
     '@antfu/utils': ^9.3.0
+  # Production dependencies
+  prod:
+    '@clack/prompts': ^1.0.0
+    gray-matter: ^4.0.3
+    picocolors: ^1.1.1
+    xdg-basedir: ^5.1.0
+  # Testing tools
   testing:
     tinyexec: ^1.0.2
-    vitest: ^4.0.15
-    vitest-package-exports: ^0.1.1
+    vitest: ^4.0.18
+    vitest-package-exports: ^1.1.2
     yaml: ^2.8.2
+  # Type definitions
   types:
-    '@types/node': ^25.0.1
+    '@types/node': ^25.1.0
 onlyBuiltDependencies:
   - esbuild
   - simple-git-hooks
