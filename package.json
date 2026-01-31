@@ -51,6 +51,7 @@
     "@clack/prompts": "catalog:prod",
     "gray-matter": "catalog:prod",
     "picocolors": "catalog:prod",
+    "simple-git": "catalog:",
     "xdg-basedir": "catalog:prod"
   },
   "devDependencies": {

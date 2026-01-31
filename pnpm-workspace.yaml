@@ -1,17 +1,22 @@
 catalogMode: prefer
+
 ignoreWorkspaceRootCheck: true
+
 shellEmulator: true
+
 trustPolicy: no-downgrade
+
 trustPolicyExclude:
   - semver@6.3.1
   - undici-types@6.21.0
   - langium@3.3.1
-
 packages:
   - playground
   - docs
   - packages/*
   - examples/*
+catalog:
+  simple-git: ^3.30.0
 catalogs:
   dev:
     '@antfu/eslint-config': ^7.2.0
