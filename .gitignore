@@ -12,3 +12,11 @@ temp
 
 # Agent skills from npm packages (managed by skills-npm)
 skills/npm-*
+.claude
+.cursor
+.qwen
+.pi
+.roo
+.github/skills
+.goose
+.opencode
