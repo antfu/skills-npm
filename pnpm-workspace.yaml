@@ -37,6 +37,7 @@ catalogs:
     cac: ^6.7.14
     gray-matter: ^4.0.3
     picocolors: ^1.1.1
+    unconfig: ^7.4.2
     xdg-basedir: ^5.1.0
   testing:
     tinyexec: ^1.0.2

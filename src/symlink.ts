@@ -62,12 +62,10 @@ export async function symlinkSkill(skill: NpmSkill, options: SymlinkOptions = {}
 
   // Determine which agents to install to
   let targetAgents: AgentType[]
-  if (options.agents && options.agents.length > 0) {
+  if (options.agents && options.agents.length > 0)
     targetAgents = options.agents as AgentType[]
-  }
-  else {
+  else
     targetAgents = await detectInstalledAgents()
-  }
 
   for (const agentType of targetAgents) {
     const agent = agents[agentType]

@@ -37,12 +37,9 @@ export async function updateGitignore(
   if (await hasGitignorePattern(cwd))
     return { updated: false, created: false }
 
-  if (dryRun) {
-    const exists = await gitignoreExists(cwd)
-    return { updated: true, created: !exists }
-  }
-
   const exists = await gitignoreExists(cwd)
+  if (dryRun)
+    return { updated: true, created: !exists }
 
   // Create .gitignore file
   if (!exists) {

@@ -45,13 +45,14 @@
     "start": "tsx src/cli.ts",
     "test": "vitest",
     "typecheck": "tsc",
-    "prepare": "git submodule update --init --recursive && simple-git-hooks && pnpm start --dry-run"
+    "prepare": "git submodule update --init --recursive && simple-git-hooks && pnpm start"
   },
   "dependencies": {
     "@clack/prompts": "catalog:prod",
     "cac": "catalog:prod",
     "gray-matter": "catalog:prod",
     "picocolors": "catalog:prod",
+    "unconfig": "catalog:prod",
     "xdg-basedir": "catalog:prod"
   },
   "devDependencies": {
