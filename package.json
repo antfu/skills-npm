@@ -45,7 +45,7 @@
     "start": "tsx src/cli.ts",
     "test": "vitest",
     "typecheck": "tsc",
-    "prepare": "git submodule update --init --recursive && simple-git-hooks && pnpm start"
+    "prepare": "git submodule update --init --recursive && simple-git-hooks && pnpm start --dry-run"
   },
   "dependencies": {
     "@clack/prompts": "catalog:prod",

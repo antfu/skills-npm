@@ -10,7 +10,7 @@ import { getAllAgentTypes, getDetectedAgents } from './agents.ts'
 import { resolveConfig } from './config.ts'
 import { isTTY } from './constants.ts'
 import { hasGitignorePattern, updateGitignore } from './gitignore.ts'
-import { printLogo, printOutro, printSkills, printSymlinkResults } from './printer.ts'
+import { printDryRun, printLogo, printOutro, printSkills, printSymlinkResults } from './printer.ts'
 import { scanNodeModules } from './scan.ts'
 import { symlinkSkills } from './symlink.ts'
 
@@ -51,10 +51,11 @@ try {
   cli.parse()
 }
 catch (error) {
+  const message = error instanceof Error ? error.message : 'Unknown error'
   if (isTTY)
-    p.log.error(error instanceof Error ? error.message : 'Unknown error')
+    p.log.error(message)
   else
-    console.error(error instanceof Error ? error.message : 'Unknown error')
+    console.error(message)
   process.exit(1)
 }
 
@@ -141,10 +142,11 @@ async function getTargetAgents(options: CommandOptions): Promise<AgentType[]> {
     }
   }
 
+  const message = `Target agents: ${c.cyan(targetAgents.join(', '))}`
   if (isTTY)
-    p.log.info(`Target agents: ${c.cyan(targetAgents.join(', '))}`)
+    p.log.info(message)
   else
-    console.log(`Target agents: ${targetAgents.join(', ')}`)
+    console.log(message)
 
   return targetAgents
 }
@@ -153,7 +155,7 @@ async function createSymlinks(skills: NpmSkill[], agents: AgentType[], options: 
   const spinner = isTTY ? p.spinner() : null
 
   if (options.dryRun && isTTY)
-    p.log.warn('[Dry run] Would create the following symlinks:')
+    printDryRun('Would create the following symlinks:')
   else if (!options.dryRun && isTTY)
     spinner?.start('Creating symlinks...')
 
@@ -176,24 +178,23 @@ async function createSymlinks(skills: NpmSkill[], agents: AgentType[], options: 
 
 async function writeGitignore(options: CommandOptions): Promise<void> {
   const hasPattern = await hasGitignorePattern(options.cwd)
-  if (!hasPattern) {
-    if (options.dryRun) {
-      if (isTTY)
-        p.log.info(`${c.yellow('[Dry run]')} Would update .gitignore with: skills/npm-*`)
-      else
-        console.log('[Dry run] Would update .gitignore with: skills/npm-*')
-    }
-    else {
-      const { updated, created } = await updateGitignore(options.cwd)
-      if (updated) {
-        const msg = created
-          ? 'Created .gitignore with skills/npm-* pattern'
-          : 'Updated .gitignore with skills/npm-* pattern'
-        if (isTTY)
-          p.log.success(msg)
-        else
-          console.log(msg)
-      }
-    }
+
+  if (hasPattern)
+    return
+
+  if (options.dryRun) {
+    printDryRun('Would update .gitignore with: skills/npm-*')
+    return
+  }
+
+  const { updated, created } = await updateGitignore(options.cwd)
+  if (updated) {
+    const msg = created
+      ? 'Created .gitignore with skills/npm-* pattern'
+      : 'Updated .gitignore with skills/npm-* pattern'
+    if (isTTY)
+      p.log.success(msg)
+    else
+      console.log(msg)
   }
 }

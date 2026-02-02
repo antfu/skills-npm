@@ -4,14 +4,12 @@ import * as p from '@clack/prompts'
 import c from 'picocolors'
 import { GRAYS, isTTY, LOGO_LINES, RESET } from './constants.ts'
 
-function formatStatus(success: boolean, isTTY: boolean): string {
-  if (!isTTY)
-    return success ? '✓' : '✗'
+function formatStatus(success: boolean): string {
   return success ? c.green('✓') : c.red('✗')
 }
 
-function formatArrow(isTTY: boolean): string {
-  return isTTY ? c.yellow('→') : '→'
+function formatArrow(): string {
+  return c.yellow('→')
 }
 
 export function printLogo(): void {
@@ -37,19 +35,16 @@ export function printSymlinkResults(results: SymlinkResult[], options: CommandOp
 
   for (const [agent, agentResults] of agentsResult) {
     const skills = agentResults.map((result) => {
-      const status = formatStatus(result.success, isTTY)
-      const prefix = options.dryRun ? formatArrow(isTTY) : status
+      const status = formatStatus(result.success)
+      const prefix = options.dryRun ? formatArrow() : status
       return `${prefix} ${result.skill.targetName}`
     }).join(', ')
 
-    const errors = agentResults.filter(r => !r.success && r.error)
-
-    if (!isTTY) {
-      console.log(`${agent}: ${skills}`)
-      return
-    }
-
     console.log(`  ${c.bold(agent)}: ${skills}`)
+    if (!isTTY)
+      return
+
+    const errors = agentResults.filter(r => !r.success && r.error)
     for (const result of errors) {
       console.log(`    ${c.red(result.error)}`)
     }
@@ -57,16 +52,15 @@ export function printSymlinkResults(results: SymlinkResult[], options: CommandOp
 }
 
 export function printOutro(totalCount: number, successCount: number, options: CommandOptions): void {
-  if (isTTY) {
-    if (options.dryRun)
-      p.outro(c.yellow(`[Dry run] Would create ${totalCount} symlinks`))
-    else
-      p.outro(c.green(`✓ Created ${successCount}/${totalCount} symlinks`))
-  }
-  else {
-    if (options.dryRun)
-      console.log(`[Dry run] Would create ${totalCount} symlinks`)
-    else
-      console.log(`Created ${successCount}/${totalCount} symlinks`)
-  }
+  if (options.dryRun)
+    p.outro(c.yellow(`[Dry run] Would create ${totalCount} symlinks`))
+  else
+    p.outro(c.green(`✓ Created ${successCount}/${totalCount} symlinks`))
+}
+
+export function printDryRun(message: string): void {
+  if (isTTY)
+    p.log.info(`${c.yellow('[Dry run]')} ${message}`)
+  else
+    console.log(`[Dry run] ${message}`)
 }
