@@ -5,34 +5,28 @@ import { platform } from 'node:os'
 import { dirname, join, relative, resolve } from 'node:path'
 import process from 'node:process'
 import { agents, detectInstalledAgents } from '../vendor/skills/src/agents.ts'
-/**
- * Create a symlink, handling cross-platform differences
- * Returns true if symlink was created successfully
- */
+
 async function createSymlink(target: string, linkPath: string): Promise<boolean> {
   try {
     const resolvedTarget = resolve(target)
     const resolvedLinkPath = resolve(linkPath)
 
-    // Don't create symlink to self
-    if (resolvedTarget === resolvedLinkPath) {
+    // Don't create symlink to the same target
+    if (resolvedTarget === resolvedLinkPath)
       return true
-    }
 
-    // Check if symlink already exists and points to the right place
     try {
       const stats = await lstat(linkPath)
-      if (stats.isSymbolicLink()) {
-        const existingTarget = await readlink(linkPath)
-        const resolvedExisting = resolve(dirname(linkPath), existingTarget)
-        if (resolvedExisting === resolvedTarget) {
-          return true // Already correctly symlinked
-        }
-        await rm(linkPath)
-      }
-      else {
+      if (!stats.isSymbolicLink())
         await rm(linkPath, { recursive: true })
-      }
+
+      const existingTarget = await readlink(linkPath)
+      const resolvedExisting = resolve(dirname(linkPath), existingTarget)
+
+      if (resolvedExisting === resolvedTarget)
+        return true
+
+      await rm(linkPath)
     }
     catch (err: unknown) {
       // Handle ELOOP (circular symlink) or ENOENT (doesn't exist)
@@ -62,13 +56,7 @@ async function createSymlink(target: string, linkPath: string): Promise<boolean>
   }
 }
 
-/**
- * Create symlinks for a skill to all agent directories
- */
-export async function symlinkSkill(
-  skill: NpmSkill,
-  options: SymlinkOptions = {},
-): Promise<SymlinkResult[]> {
+export async function symlinkSkill(skill: NpmSkill, options: SymlinkOptions = {}): Promise<SymlinkResult[]> {
   const cwd = options.cwd || process.cwd()
   const results: SymlinkResult[] = []
 
@@ -113,13 +101,7 @@ export async function symlinkSkill(
   return results
 }
 
-/**
- * Create symlinks for multiple skills
- */
-export async function symlinkSkills(
-  skills: NpmSkill[],
-  options: SymlinkOptions = {},
-): Promise<SymlinkResult[]> {
+export async function symlinkSkills(skills: NpmSkill[], options: SymlinkOptions = {}): Promise<SymlinkResult[]> {
   const allResults: SymlinkResult[] = []
 
   for (const skill of skills) {
@@ -128,18 +110,4 @@ export async function symlinkSkills(
   }
 
   return allResults
-}
-
-/**
- * Get list of detected agents
- */
-export async function getDetectedAgents(): Promise<AgentType[]> {
-  return detectInstalledAgents()
-}
-
-/**
- * Get all available agent types
- */
-export function getAllAgentTypes(): AgentType[] {
-  return Object.keys(agents) as AgentType[]
 }

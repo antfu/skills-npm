@@ -1,12 +1,15 @@
 catalogMode: prefer
+
 ignoreWorkspaceRootCheck: true
+
 shellEmulator: true
+
 trustPolicy: no-downgrade
+
 trustPolicyExclude:
   - semver@6.3.1
   - undici-types@6.21.0
   - langium@3.3.1
-
 packages:
   - playground
   - docs
@@ -31,6 +34,7 @@ catalogs:
     '@antfu/utils': ^9.3.0
   prod:
     '@clack/prompts': ^1.0.0
+    cac: ^6.7.14
     gray-matter: ^4.0.3
     picocolors: ^1.1.1
     xdg-basedir: ^5.1.0
