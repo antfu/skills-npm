@@ -3,8 +3,6 @@
 
 import fs from 'node:fs'
 import { dirname, join } from 'node:path'
-import { glob } from 'tinyglobby'
-import { DEFAULT_IGNORE_PATHS } from '../constants'
 
 const ROOT_FILES = [
   // https://pnpm.io/workspaces/
@@ -82,22 +80,4 @@ export function searchForWorkspaceRoot(
     return root
 
   return searchForWorkspaceRoot(dir, root)
-}
-
-/**
- * Search for all package.json files recursively in a workspace
- * Used for monorepo support to find all packages that may have their own node_modules
- */
-export async function searchForPackagesRoot(
-  current: string,
-  ignorePaths: string[],
-): Promise<string[]> {
-  return glob('**/package.json', {
-    ignore: DEFAULT_IGNORE_PATHS.concat(ignorePaths),
-    cwd: current,
-    onlyFiles: true,
-    dot: false,
-    expandDirectories: false,
-    absolute: true,
-  })
 }
