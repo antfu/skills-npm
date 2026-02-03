@@ -1,9 +1,9 @@
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { scanNodeModules } from '../src/scan'
 
-const fixturesDir = join(fileURLToPath(import.meta.url), '..', 'fixtures')
+const fixturesDir = join(dirname(fileURLToPath(import.meta.url)), 'fixtures')
 
 describe('monorepo', () => {
   it('should scan all packages recursively', async () => {
@@ -11,6 +11,7 @@ describe('monorepo', () => {
     const result = await scanNodeModules({
       cwd: monorepoPath,
       recursive: true,
+      ignorePaths: [], // Override default ignore to allow scanning fixtures
     })
 
     expect(result.skills).toHaveLength(2)
