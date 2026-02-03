@@ -22,6 +22,5 @@ export async function searchForPackagesRoot(
     onlyFiles: true,
     dot: false,
     expandDirectories: false,
-    absolute: true,
   })
 }
