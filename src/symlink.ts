@@ -1,10 +1,15 @@
-import type { AgentType } from './types'
-import type { NpmSkill, SymlinkOptions, SymlinkResult } from './types.ts'
+import type {
+  AgentType,
+  NpmSkill,
+  SymlinkOptions,
+  SymlinkResult,
+} from './types'
 import { lstat, mkdir, readlink, rm, symlink } from 'node:fs/promises'
 import { platform } from 'node:os'
 import { dirname, join, relative, resolve } from 'node:path'
 import process from 'node:process'
 import { agents, detectInstalledAgents } from './agents'
+import { searchForWorkspaceRoot } from './utils'
 
 async function createSymlink(target: string, linkPath: string): Promise<boolean> {
   try {
@@ -57,7 +62,7 @@ async function createSymlink(target: string, linkPath: string): Promise<boolean>
 }
 
 export async function symlinkSkill(skill: NpmSkill, options: SymlinkOptions = {}): Promise<SymlinkResult[]> {
-  const cwd = options.cwd || process.cwd()
+  const cwd = options.cwd || searchForWorkspaceRoot(process.cwd())
   const results: SymlinkResult[] = []
 
   // Determine which agents to install to

@@ -1,4 +1,4 @@
-import type { CommandOptions } from './types'
+import type { CommandOptions, ResolvedOptions } from './types'
 import process from 'node:process'
 import { createConfigLoader } from 'unconfig'
 import { DEFAULT_OPTIONS } from './constants'
@@ -27,7 +27,7 @@ async function readConfig(options: Partial<CommandOptions>): Promise<CommandOpti
   return config.sources.length ? normalizeConfig(config.config) : {}
 }
 
-export async function resolveConfig(options: Partial<CommandOptions>): Promise<CommandOptions> {
+export async function resolveConfig(options: Partial<CommandOptions>): Promise<ResolvedOptions> {
   const defaults = structuredClone(DEFAULT_OPTIONS)
   options = normalizeConfig(options)
 
@@ -35,6 +35,10 @@ export async function resolveConfig(options: Partial<CommandOptions>): Promise<C
   const merged = { ...defaults, ...configOptions, ...options }
 
   merged.cwd = merged.cwd || searchForWorkspaceRoot(process.cwd())
+  if (merged.agents)
+    merged.agents = Array.isArray(merged.agents) ? merged.agents : [merged.agents]
+  if (merged.ignorePaths)
+    merged.ignorePaths = Array.isArray(merged.ignorePaths) ? merged.ignorePaths : [merged.ignorePaths]
 
-  return merged
+  return merged as ResolvedOptions
 }

@@ -3,6 +3,24 @@ import process from 'node:process'
 
 export const isTTY = process.stdout.isTTY
 
+export const DEFAULT_OPTIONS: CommandOptions = {
+  recursive: false,
+  gitignore: true,
+  yes: false,
+  dryRun: false,
+  exclude: [],
+  ignorePaths: [],
+}
+
+export const DEFAULT_IGNORE_PATHS = [
+  '**/node_modules/**',
+  '**/dist/**',
+  '**/public/**',
+  '**/fixture/**',
+  '**/fixtures/**',
+  '**/vendor/**',
+]
+
 export const LOGO_LINES = [
   '███████╗██╗  ██╗██╗██╗     ██╗     ███████╗      ███╗   ██╗██████╗ ███╗   ███╗',
   '██╔════╝██║ ██╔╝██║██║     ██║     ██╔════╝      ████╗  ██║██╔══██╗████╗ ████║',
@@ -21,13 +39,6 @@ export const GRAYS = [
   '\x1B[38;5;238m', // Darker gray
 ]
 export const RESET = '\x1B[0m'
-
-export const DEFAULT_OPTIONS: CommandOptions = {
-  gitignore: true,
-  yes: false,
-  dryRun: false,
-  exclude: [],
-}
 
 export const GITIGNORE_PATTERN = 'skills/npm-*'
 export const GITIGNORE_COMMENT = '# Agent skills from npm packages (managed by skills-npm)'

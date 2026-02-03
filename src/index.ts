@@ -1,11 +1,11 @@
-import type { CommandOptions } from './types.ts'
+import type { CommandOptions } from './types'
 
-export * from './agents.ts'
-export * from './gitignore.ts'
-export * from './scan.ts'
-export * from './symlink.ts'
-export type * from './types.ts'
-export * from './utils/index.ts'
+export * from './agents'
+export * from './gitignore'
+export * from './scan'
+export * from './symlink'
+export type * from './types'
+export * from './utils/index'
 
 export function defineConfig(config: Partial<CommandOptions>): Partial<CommandOptions> {
   return config

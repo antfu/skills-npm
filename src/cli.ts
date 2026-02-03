@@ -1,19 +1,18 @@
 #!/usr/bin/env node
 import type { CAC } from 'cac'
-import type { AgentType, CommandOptions, NpmSkill } from './types.ts'
+import type { AgentType, CommandOptions, NpmSkill, ResolvedOptions } from './types'
 import process from 'node:process'
 import * as p from '@clack/prompts'
 import { cac } from 'cac'
 import c from 'picocolors'
 import { name, version } from '../package.json'
-import { agents } from './agents'
-import { getAllAgentTypes, getDetectedAgents } from './agents.ts'
-import { resolveConfig } from './config.ts'
-import { isTTY } from './constants.ts'
-import { hasGitignorePattern, updateGitignore } from './gitignore.ts'
-import { printDryRun, printInvalidSkills, printLogo, printOutro, printSkills, printSymlinkResults } from './printer.ts'
-import { filterExcludedSkills, scanNodeModules } from './scan.ts'
-import { symlinkSkills } from './symlink.ts'
+import { agents, getAllAgentTypes, getDetectedAgents } from './agents'
+import { resolveConfig } from './config'
+import { isTTY } from './constants'
+import { hasGitignorePattern, updateGitignore } from './gitignore'
+import { printDryRun, printInvalidSkills, printLogo, printOutro, printSkills, printSymlinkResults } from './printer'
+import { filterExcludedSkills, scanNodeModules } from './scan'
+import { symlinkSkills } from './symlink'
 
 const cli: CAC = cac(name)
 
@@ -22,6 +21,8 @@ try {
     .command('', 'CLI to install agents skills that shipped with your installed npm packages')
     .option('--cwd <cwd>', 'Current working directory')
     .option('--agents, -a <agents>', 'Comma-separated list of agents to install to')
+    .option('--recursive, -r', 'Scan recursively for monorepo packages', { default: false })
+    .option('--ignore-paths <paths>', 'Ignore paths for searching package.json', { default: [] })
     .option('--gitignore', 'Skip updating .gitignore', { default: true })
     .option('--yes', 'Skip confirmation prompts', { default: false })
     .option('--dry-run', 'Show what would be done without making changes', { default: false })
@@ -34,17 +35,17 @@ try {
       const config = await resolveConfig(options)
 
       const skills = await scanSkills(config)
-      const targetAgents = await getTargetAgents(options)
+      const targetAgents = await getTargetAgents(config)
 
       if (isTTY && !config.dryRun && !config.yes)
         await promptConfirm(skills, targetAgents)
 
-      const [totalCount, successCount] = await createSymlinks(skills, targetAgents, options)
+      const [totalCount, successCount] = await createSymlinks(skills, targetAgents, config)
 
       if (config.gitignore !== false)
-        await writeGitignore(options)
+        await writeGitignore(config)
 
-      printOutro(totalCount, successCount, options)
+      printOutro(totalCount, successCount, config)
     })
 
   cli.help()
@@ -70,11 +71,14 @@ async function promptConfirm(skills: NpmSkill[], targetAgents: AgentType[]): Pro
   }
 }
 
-async function scanSkills(options: CommandOptions): Promise<NpmSkill[]> {
+async function scanSkills(options: ResolvedOptions): Promise<NpmSkill[]> {
   const spinner = isTTY ? p.spinner() : null
   spinner?.start('Scanning node_modules for skills...')
 
-  const { skills: scannedSkills, invalidSkills, packageCount } = await scanNodeModules({ cwd: options.cwd })
+  const { skills: scannedSkills, invalidSkills, packageCount } = await scanNodeModules({
+    cwd: options.cwd,
+    recursive: options.recursive,
+  })
   const skills = filterExcludedSkills(scannedSkills, options.exclude)
   const excludedCount = scannedSkills.length - skills.length
   const hasInvalidSkills = invalidSkills.length > 0
@@ -124,7 +128,7 @@ async function scanSkills(options: CommandOptions): Promise<NpmSkill[]> {
   return skills
 }
 
-async function getTargetAgents(options: CommandOptions): Promise<AgentType[]> {
+async function getTargetAgents(options: ResolvedOptions): Promise<AgentType[]> {
   let targetAgents: AgentType[]
 
   if (options.agents && options.agents.length > 0) {
@@ -173,7 +177,7 @@ async function getTargetAgents(options: CommandOptions): Promise<AgentType[]> {
   return targetAgents
 }
 
-async function createSymlinks(skills: NpmSkill[], agents: AgentType[], options: CommandOptions): Promise<[number, number]> {
+async function createSymlinks(skills: NpmSkill[], agents: AgentType[], options: ResolvedOptions): Promise<[number, number]> {
   const spinner = isTTY ? p.spinner() : null
 
   if (options.dryRun && isTTY)
@@ -198,7 +202,7 @@ async function createSymlinks(skills: NpmSkill[], agents: AgentType[], options: 
   return [totalCount, successCount]
 }
 
-async function writeGitignore(options: CommandOptions): Promise<void> {
+async function writeGitignore(options: ResolvedOptions): Promise<void> {
   const hasPattern = await hasGitignorePattern(options.cwd)
 
   if (hasPattern)

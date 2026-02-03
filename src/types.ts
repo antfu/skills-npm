@@ -1,6 +1,6 @@
-import type { AgentType } from '../vendor/skills/src/types.ts'
+import type { AgentType } from '../vendor/skills/src/types'
 
-export type { AgentConfig, AgentType, Skill } from '../vendor/skills/src/types.ts'
+export type { AgentConfig, AgentType, Skill } from '../vendor/skills/src/types'
 
 /**
  * Item to exclude - either a package name (string) or an object specifying specific skills
@@ -19,7 +19,12 @@ export interface CommandOptions {
    * Target agents to install to (defaults to all detected agents)
    * @default all detected agents
    */
-  agents?: AgentType[]
+  agents?: AgentType | AgentType[]
+  /**
+   * Whether to scan recursively for monorepo packages (defaults to false)
+   * @default false
+   */
+  recursive?: boolean
   /**
    * Skip updating .gitignore
    * @default true
@@ -40,6 +45,16 @@ export interface CommandOptions {
    * @default []
    */
   exclude?: ExcludeItem[]
+  /**
+   * Paths to ignore when searching recursively
+   * @default []
+   */
+  ignorePaths?: string | string[]
+}
+
+export interface ResolvedOptions extends Omit<CommandOptions, 'agents' | 'ignorePaths'> {
+  agents: AgentType[]
+  ignorePaths: string[]
 }
 
 export interface NpmSkill {
@@ -75,6 +90,16 @@ export interface ScanOptions {
    * @default searchForWorkspaceRoot(process.cwd())
    */
   cwd?: string
+  /**
+   * Whether to scan recursively for monorepo packages (defaults to false)
+   * @default false
+   */
+  recursive?: boolean
+  /**
+   * Paths to ignore when searching recursively
+   * @default []
+   */
+  ignorePaths?: string[]
 }
 
 export interface InvalidSkill {
@@ -122,7 +147,7 @@ export interface SymlinkOptions {
    * Target agents to install to (defaults to all detected agents)
    * @default all detected agents
    */
-  agents?: string[]
+  agents?: AgentType[]
 }
 
 export interface SymlinkResult {

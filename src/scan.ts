@@ -1,15 +1,65 @@
-import type { ExcludeItem, InvalidSkill, NpmSkill, ScanOptions, ScanResult } from './types.ts'
+import type {
+  ExcludeItem,
+  InvalidSkill,
+  NpmSkill,
+  ScanOptions,
+  ScanResult,
+} from './types'
 import { readdir, stat } from 'node:fs/promises'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import process from 'node:process'
-import { createTargetName, hasValidSkillMd, isDirectoryOrSymlink, searchForWorkspaceRoot } from './utils/index'
+import {
+  createTargetName,
+  hasValidSkillMd,
+  isDirectoryOrSymlink,
+  searchForPackagesRoot,
+  searchForWorkspaceRoot,
+} from './utils/index'
+
+export async function scanNodeModules(options: ScanOptions = {}): Promise<ScanResult> {
+  const cwd = options.cwd || searchForWorkspaceRoot(process.cwd())
+  if (!options.recursive)
+    return scanCurrentNodeModules(cwd)
+  return scanNodeModulesRecursively({ ...options, cwd })
+}
+
+export async function scanNodeModulesRecursively(options: ScanOptions): Promise<ScanResult> {
+  const cwd = options.cwd || searchForWorkspaceRoot(process.cwd())
+  const scanResult = {
+    skills: new Map<string, NpmSkill>(),
+    invalidSkills: new Map<string, InvalidSkill>(),
+    packageCount: 0,
+  }
+
+  const packagePaths = await searchForPackagesRoot(cwd, options.ignorePaths || [])
+  for (const path of packagePaths) {
+    const { skills, invalidSkills, packageCount } = await scanCurrentNodeModules(dirname(path))
+
+    skills.forEach((skill) => {
+      if (!scanResult.skills.has(skill.packageName))
+        scanResult.skills.set(skill.packageName, skill)
+    })
+
+    invalidSkills.forEach((invalidSkill) => {
+      if (!scanResult.invalidSkills.has(invalidSkill.packageName))
+        scanResult.invalidSkills.set(invalidSkill.packageName, invalidSkill)
+    })
+
+    scanResult.packageCount += packageCount
+  }
+
+  return {
+    skills: Array.from(scanResult.skills.values()),
+    invalidSkills: Array.from(scanResult.invalidSkills.values()),
+    packageCount: scanResult.packageCount,
+  }
+}
 
 /**
  * Scan node_modules for packages that contain skills
  * Only scans first-level packages (not nested dependencies)
  */
-export async function scanNodeModules(options: ScanOptions = {}): Promise<ScanResult> {
-  const cwd = options.cwd || searchForWorkspaceRoot(process.cwd())
+export async function scanCurrentNodeModules(cwd: string): Promise<ScanResult> {
   const nodeModulesPath = join(cwd, 'node_modules')
   const allSkills: NpmSkill[] = []
   const allInvalidSkills: InvalidSkill[] = []

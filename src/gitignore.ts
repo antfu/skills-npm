@@ -1,7 +1,7 @@
 import { access, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import process from 'node:process'
-import { GITIGNORE_COMMENT, GITIGNORE_PATTERN } from './constants.ts'
+import { GITIGNORE_COMMENT, GITIGNORE_PATTERN } from './constants'
 
 export async function hasGitignorePattern(cwd: string = process.cwd()): Promise<boolean> {
   const gitignorePath = join(cwd, '.gitignore')

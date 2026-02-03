@@ -1,8 +1,8 @@
 /* eslint-disable no-console */
-import type { CommandOptions, InvalidSkill, NpmSkill, SymlinkResult } from './types.ts'
+import type { InvalidSkill, NpmSkill, ResolvedOptions, SymlinkResult } from './types'
 import * as p from '@clack/prompts'
 import c from 'picocolors'
-import { GRAYS, isTTY, LOGO_LINES, RESET } from './constants.ts'
+import { GRAYS, isTTY, LOGO_LINES, RESET } from './constants'
 
 function formatStatus(success: boolean): string {
   return success ? c.green('✓') : c.red('✗')
@@ -41,7 +41,7 @@ export function printInvalidSkills(invalidSkills: InvalidSkill[]): void {
   }
 }
 
-export function printSymlinkResults(results: SymlinkResult[], options: CommandOptions): void {
+export function printSymlinkResults(results: SymlinkResult[], options: ResolvedOptions): void {
   const agentsResult = new Map<string, SymlinkResult[]>()
   for (const result of results) {
     const agentResults = agentsResult.get(result.agent) || []
@@ -67,7 +67,7 @@ export function printSymlinkResults(results: SymlinkResult[], options: CommandOp
   }
 }
 
-export function printOutro(totalCount: number, successCount: number, options: CommandOptions): void {
+export function printOutro(totalCount: number, successCount: number, options: ResolvedOptions): void {
   if (options.dryRun)
     p.outro(c.yellow(`[Dry run] Would create ${totalCount} symlinks`))
   else

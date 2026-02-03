@@ -63,6 +63,9 @@ catalogs:
     picocolors:
       specifier: ^1.1.1
       version: 1.1.1
+    tinyglobby:
+      specifier: ^0.2.15
+      version: 0.2.15
     unconfig:
       specifier: ^7.4.2
       version: 7.4.2
@@ -103,6 +106,9 @@ importers:
       picocolors:
         specifier: catalog:prod
         version: 1.1.1
+      tinyglobby:
+        specifier: catalog:prod
+        version: 0.2.15
       unconfig:
         specifier: catalog:prod
         version: 7.4.2
