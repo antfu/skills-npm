@@ -11,7 +11,7 @@ import { getAllAgentTypes, getDetectedAgents } from './agents.ts'
 import { resolveConfig } from './config.ts'
 import { isTTY } from './constants.ts'
 import { hasGitignorePattern, updateGitignore } from './gitignore.ts'
-import { printDryRun, printLogo, printOutro, printSkills, printSymlinkResults } from './printer.ts'
+import { printDryRun, printInvalidSkills, printLogo, printOutro, printSkills, printSymlinkResults } from './printer.ts'
 import { scanNodeModules } from './scan.ts'
 import { symlinkSkills } from './symlink.ts'
 
@@ -74,30 +74,45 @@ async function scanSkills(options: CommandOptions): Promise<NpmSkill[]> {
   const spinner = isTTY ? p.spinner() : null
   spinner?.start('Scanning node_modules for skills...')
 
-  const { skills, packageCount } = await scanNodeModules({ cwd: options.cwd })
+  const { skills, invalidSkills, packageCount } = await scanNodeModules({ cwd: options.cwd })
+  const hasInvalidSkills = invalidSkills.length > 0
+  const invalidCount = invalidSkills.length
+
   if (skills.length === 0) {
-    const msg = `Scanned ${packageCount} package${packageCount !== 1 ? 's' : ''}, no skills found`
+    let msg = `Scanned ${packageCount} package${packageCount !== 1 ? 's' : ''}, no skills found`
+    if (hasInvalidSkills)
+      msg += ` (${invalidCount} invalid)`
     if (isTTY) {
       spinner?.stop(msg)
+      if (hasInvalidSkills)
+        printInvalidSkills(invalidSkills)
       p.outro(c.dim('https://github.com/antfu/skills-npm'))
     }
     else {
       console.log(msg)
+      if (hasInvalidSkills)
+        printInvalidSkills(invalidSkills)
     }
     process.exit(0)
   }
 
-  const message = `Scanned ${packageCount} package${packageCount !== 1 ? 's' : ''}, found ${skills.length} skill${skills.length !== 1 ? 's' : ''}`
+  let message = `Scanned ${packageCount} package${packageCount !== 1 ? 's' : ''}, found ${skills.length} skill${skills.length !== 1 ? 's' : ''}`
+  if (hasInvalidSkills)
+    message += ` (${invalidCount} invalid)`
   if (isTTY) {
     spinner?.stop(message)
     p.log.info('Discovered skills:')
     printSkills(skills)
+    if (hasInvalidSkills)
+      printInvalidSkills(invalidSkills)
   }
   else {
     console.log(message)
     for (const skill of skills) {
       console.log(`  - ${skill.name} (${skill.packageName})`)
     }
+    if (hasInvalidSkills)
+      printInvalidSkills(invalidSkills)
   }
 
   return skills

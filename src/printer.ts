@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import type { CommandOptions, NpmSkill, SymlinkResult } from './types.ts'
+import type { CommandOptions, InvalidSkill, NpmSkill, SymlinkResult } from './types.ts'
 import * as p from '@clack/prompts'
 import c from 'picocolors'
 import { GRAYS, isTTY, LOGO_LINES, RESET } from './constants.ts'
@@ -22,6 +22,22 @@ export function printSkills(skills: NpmSkill[]): void {
   for (const skill of skills) {
     console.log(`  ${c.green('●')} ${c.bold(skill.name)} ${c.dim(`from ${skill.packageName}`)}`)
     console.log(`    ${c.dim(skill.description)}`)
+  }
+}
+
+export function printInvalidSkills(invalidSkills: InvalidSkill[]): void {
+  if (isTTY) {
+    p.log.info('Invalid skills skipped:')
+    for (const invalid of invalidSkills) {
+      console.log(`  ${c.yellow('⚠')} ${c.dim(invalid.packageName)}/${invalid.skillName}`)
+      console.log(`    ${c.dim(`Error: ${invalid.error}`)}`)
+    }
+  }
+  else {
+    console.log('Invalid skills skipped:')
+    for (const invalid of invalidSkills) {
+      console.log(`  - ${invalid.packageName}/${invalid.skillName}: ${invalid.error}`)
+    }
   }
 }
 

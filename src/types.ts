@@ -65,11 +65,30 @@ export interface ScanOptions {
   cwd?: string
 }
 
+export interface InvalidSkill {
+  /**
+   * NPM package name
+   */
+  packageName: string
+  /**
+   * Skill directory name
+   */
+  skillName: string
+  /**
+   * Error describing why the skill is invalid
+   */
+  error: string
+}
+
 export interface ScanResult {
   /**
    * Skills found in the scan
    */
   skills: NpmSkill[]
+  /**
+   * Invalid skills found in the scan
+   */
+  invalidSkills: InvalidSkill[]
   /**
    * Number of packages scanned
    */
