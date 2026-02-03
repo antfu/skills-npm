@@ -47,6 +47,51 @@ Add a `prepare` script to your `package.json` so the skills are symlinked automa
 skills/npm-*
 ```
 
+## Configuration
+
+You can create a `skills-npm.config.ts` file in your project root to configure the behavior:
+
+```ts
+// skills-npm.config.ts
+import { defineConfig } from 'skills-npm'
+
+export default defineConfig({
+  // Target specific agents (defaults to all detected agents)
+  agents: ['cursor', 'windsurf'],
+  // Whether to update .gitignore (default: true)
+  gitignore: true,
+  // Skip confirmation prompts (default: false)
+  yes: false,
+  // Dry run mode (default: false)
+  dryRun: false,
+})
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `cwd` | `string` | `process.cwd()` | Current working directory |
+| `agents` | `string[]` | All detected | Target agents to install to |
+| `gitignore` | `boolean` | `true` | Whether to update .gitignore |
+| `yes` | `boolean` | `false` | Skip confirmation prompts |
+| `dryRun` | `boolean` | `false` | Show what would be done without making changes |
+
+## CLI Options
+
+```bash
+skills-npm [options]
+
+Options:
+  --cwd <cwd>        Current working directory
+  -a, --agents       Comma-separated list of agents to install to
+  --gitignore        Whether to update .gitignore (default: true)
+  --yes              Skip confirmation prompts
+  --dry-run          Show what would be done without making changes
+  -h, --help         Display help
+  -v, --version      Display version
+```
+
 ## For Package Authors
 
 Include a `skills/` directory in your package:
