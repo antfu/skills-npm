@@ -61,6 +61,8 @@ node_modules/**/skills/*/SKILL.md
 
 This pattern finds skills in direct dependencies, nested dependencies, and workspace packages.
 
+In monorepo setups, use the `--recursive` flag to scan all workspace packages for skills, and `--ignore-paths` to exclude specific directories from the search.
+
 ### Symlink Creation
 
 Once discovered, skills are symlinked to agent-specific directories (e.g., `.cursor/skills/`, `.claude/skills/`). The tool automatically detects which agents are present and creates symlinks accordingly.
