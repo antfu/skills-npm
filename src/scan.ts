@@ -33,10 +33,7 @@ export async function scanNodeModulesRecursively(options: ScanOptions): Promise<
 
   const packagePaths = await searchForPackagesRoot(cwd, options.ignorePaths || [])
   for (const packagePath of packagePaths) {
-    const path = join(cwd, dirname(packagePath))
-    // eslint-disable-next-line no-console
-    console.log('scanning', path)
-    const { skills, invalidSkills, packageCount } = await scanCurrentNodeModules(path)
+    const { skills, invalidSkills, packageCount } = await scanCurrentNodeModules(dirname(packagePath))
 
     skills.forEach((skill) => {
       if (!scanResult.skills.has(skill.packageName))
@@ -50,9 +47,6 @@ export async function scanNodeModulesRecursively(options: ScanOptions): Promise<
 
     scanResult.packageCount += packageCount
   }
-
-  // eslint-disable-next-line no-console
-  console.log(scanResult)
 
   return {
     skills: Array.from(scanResult.skills.values()),
