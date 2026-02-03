@@ -2,6 +2,13 @@ import type { AgentType } from '../vendor/skills/src/types.ts'
 
 export type { AgentConfig, AgentType, Skill } from '../vendor/skills/src/types.ts'
 
+/**
+ * Item to exclude - either a package name (string) or an object specifying specific skills
+ */
+export type ExcludeItem
+  = | string // package name to exclude entirely
+    | { package: string, skills: string[] } // specific skills to exclude from a package
+
 export interface CommandOptions {
   /**
    * Current working directory (defaults to workspace root)
@@ -28,6 +35,11 @@ export interface CommandOptions {
    * @default false
    */
   dryRun?: boolean
+  /**
+   * Packages or skills to exclude from being installed
+   * @default []
+   */
+  exclude?: ExcludeItem[]
 }
 
 export interface NpmSkill {

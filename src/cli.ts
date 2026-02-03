@@ -12,7 +12,7 @@ import { resolveConfig } from './config.ts'
 import { isTTY } from './constants.ts'
 import { hasGitignorePattern, updateGitignore } from './gitignore.ts'
 import { printDryRun, printInvalidSkills, printLogo, printOutro, printSkills, printSymlinkResults } from './printer.ts'
-import { scanNodeModules } from './scan.ts'
+import { filterExcludedSkills, scanNodeModules } from './scan.ts'
 import { symlinkSkills } from './symlink.ts'
 
 const cli: CAC = cac(name)
@@ -74,12 +74,16 @@ async function scanSkills(options: CommandOptions): Promise<NpmSkill[]> {
   const spinner = isTTY ? p.spinner() : null
   spinner?.start('Scanning node_modules for skills...')
 
-  const { skills, invalidSkills, packageCount } = await scanNodeModules({ cwd: options.cwd })
+  const { skills: scannedSkills, invalidSkills, packageCount } = await scanNodeModules({ cwd: options.cwd })
+  const skills = filterExcludedSkills(scannedSkills, options.exclude)
+  const excludedCount = scannedSkills.length - skills.length
   const hasInvalidSkills = invalidSkills.length > 0
   const invalidCount = invalidSkills.length
 
   if (skills.length === 0) {
     let msg = `Scanned ${packageCount} package${packageCount !== 1 ? 's' : ''}, no skills found`
+    if (excludedCount > 0)
+      msg += ` (${excludedCount} excluded)`
     if (hasInvalidSkills)
       msg += ` (${invalidCount} invalid)`
     if (isTTY) {
@@ -97,6 +101,8 @@ async function scanSkills(options: CommandOptions): Promise<NpmSkill[]> {
   }
 
   let message = `Scanned ${packageCount} package${packageCount !== 1 ? 's' : ''}, found ${skills.length} skill${skills.length !== 1 ? 's' : ''}`
+  if (excludedCount > 0)
+    message += ` (${excludedCount} excluded)`
   if (hasInvalidSkills)
     message += ` (${invalidCount} invalid)`
   if (isTTY) {

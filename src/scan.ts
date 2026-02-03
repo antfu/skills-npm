@@ -1,4 +1,4 @@
-import type { InvalidSkill, NpmSkill, ScanOptions, ScanResult } from './types.ts'
+import type { ExcludeItem, InvalidSkill, NpmSkill, ScanOptions, ScanResult } from './types.ts'
 import { readdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import process from 'node:process'
@@ -105,4 +105,28 @@ export async function scanPackageForSkills(nodeModulesPath: string, packageName:
   }
 
   return { skills, invalidSkills }
+}
+
+/**
+ * Filter out skills that should be excluded based on the exclude config
+ */
+export function filterExcludedSkills(skills: NpmSkill[], exclude: ExcludeItem[] | undefined): NpmSkill[] {
+  if (!exclude || exclude.length === 0)
+    return skills
+
+  return skills.filter((skill) => {
+    for (const item of exclude) {
+      if (typeof item === 'string') {
+        // Exclude all skills from this package
+        if (skill.packageName === item)
+          return false
+      }
+      else {
+        // Exclude specific skills from this package
+        if (skill.packageName === item.package && item.skills.includes(skill.skillName))
+          return false
+      }
+    }
+    return true
+  })
 }

@@ -64,6 +64,13 @@ export default defineConfig({
   yes: false,
   // Dry run mode (default: false)
   dryRun: false,
+  // Exclude specific packages or skills
+  exclude: [
+    // Exclude all skills from a package
+    '@some/package',
+    // Exclude specific skills from a package
+    { package: '@slidev/cli', skills: ['presenter-mode'] },
+  ],
 })
 ```
 
@@ -76,6 +83,7 @@ export default defineConfig({
 | `gitignore` | `boolean` | `true` | Whether to update .gitignore |
 | `yes` | `boolean` | `false` | Skip confirmation prompts |
 | `dryRun` | `boolean` | `false` | Show what would be done without making changes |
+| `exclude` | `(string \| { package: string, skills: string[] })[]` | `[]` | Packages or skills to exclude from being installed |
 
 > The `cwd` defaults to the workspace root, which is detected by searching up for `pnpm-workspace.yaml`, `lerna.json`, or a `package.json` with `workspaces` field. Falls back to the nearest `package.json`.
 

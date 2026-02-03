@@ -26,6 +26,7 @@ export const DEFAULT_OPTIONS: CommandOptions = {
   gitignore: true,
   yes: false,
   dryRun: false,
+  exclude: [],
 }
 
 export const GITIGNORE_PATTERN = 'skills/npm-*'
