@@ -71,11 +71,13 @@ export default defineConfig({
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `cwd` | `string` | `process.cwd()` | Current working directory |
+| `cwd` | `string` | Workspace root | Current working directory |
 | `agents` | `string[]` | All detected | Target agents to install to |
 | `gitignore` | `boolean` | `true` | Whether to update .gitignore |
 | `yes` | `boolean` | `false` | Skip confirmation prompts |
 | `dryRun` | `boolean` | `false` | Show what would be done without making changes |
+
+> The `cwd` defaults to the workspace root, which is detected by searching up for `pnpm-workspace.yaml`, `lerna.json`, or a `package.json` with `workspaces` field. Falls back to the nearest `package.json`.
 
 ## CLI Options
 
@@ -112,6 +114,9 @@ See [PROPOSAL.md](./PROPOSAL.md#for-package-authors) for detailed instructions.
 Packages that ships their built-in skills:
 
 - [`@slidev/cli`](https://github.com/slidevjs/slidev)
+
+> [!NOTE]
+> PR are welcome to add more packages that ships their built-in skills.
 
 ## Sponsors
 

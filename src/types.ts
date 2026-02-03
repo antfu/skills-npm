@@ -4,8 +4,8 @@ export type { AgentConfig, AgentType, Skill } from '../vendor/skills/src/types.t
 
 export interface CommandOptions {
   /**
-   * Current working directory (defaults to process.cwd())
-   * @default process.cwd()
+   * Current working directory (defaults to workspace root)
+   * @default searchForWorkspaceRoot(process.cwd())
    */
   cwd?: string
   /**
@@ -59,8 +59,8 @@ export interface NpmSkill {
 
 export interface ScanOptions {
   /**
-   * Current working directory (defaults to process.cwd())
-   * @default process.cwd()
+   * Current working directory (defaults to workspace root)
+   * @default searchForWorkspaceRoot(process.cwd())
    */
   cwd?: string
 }
@@ -78,8 +78,8 @@ export interface ScanResult {
 
 export interface SymlinkOptions {
   /**
-   * Current working directory (defaults to process.cwd())
-   * @default process.cwd()
+   * Current working directory (defaults to workspace root)
+   * @default searchForWorkspaceRoot(process.cwd())
    */
   cwd?: string
   /**

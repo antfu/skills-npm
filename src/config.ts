@@ -2,6 +2,7 @@ import type { CommandOptions } from './types'
 import process from 'node:process'
 import { createConfigLoader } from 'unconfig'
 import { DEFAULT_OPTIONS } from './constants'
+import { searchForWorkspaceRoot } from './utils/index'
 
 function normalizeConfig(options: Partial<CommandOptions>): CommandOptions {
   // Interop
@@ -19,7 +20,7 @@ async function readConfig(options: Partial<CommandOptions>): Promise<CommandOpti
         extensions: ['ts'],
       },
     ],
-    cwd: options.cwd || process.cwd(),
+    cwd: options.cwd || searchForWorkspaceRoot(process.cwd()),
     merge: false,
   })
   const config = await loader.load()
@@ -33,7 +34,7 @@ export async function resolveConfig(options: Partial<CommandOptions>): Promise<C
   const configOptions = await readConfig(options)
   const merged = { ...defaults, ...configOptions, ...options }
 
-  merged.cwd = merged.cwd || process.cwd()
+  merged.cwd = merged.cwd || searchForWorkspaceRoot(process.cwd())
 
   return merged
 }

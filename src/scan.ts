@@ -2,14 +2,14 @@ import type { NpmSkill, ScanOptions, ScanResult } from './types.ts'
 import { readdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import process from 'node:process'
-import { createTargetName, hasValidSkillMd, isDirectoryOrSymlink } from './utils'
+import { createTargetName, hasValidSkillMd, isDirectoryOrSymlink, searchForWorkspaceRoot } from './utils/index'
 
 /**
  * Scan node_modules for packages that contain skills
  * Only scans first-level packages (not nested dependencies)
  */
 export async function scanNodeModules(options: ScanOptions = {}): Promise<ScanResult> {
-  const cwd = options.cwd || process.cwd()
+  const cwd = options.cwd || searchForWorkspaceRoot(process.cwd())
   const nodeModulesPath = join(cwd, 'node_modules')
   const allSkills: NpmSkill[] = []
   let packageCount = 0

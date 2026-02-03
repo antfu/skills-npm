@@ -1,10 +1,10 @@
-import type { AgentType } from '../vendor/skills/src/types.ts'
+import type { AgentType } from './types'
 import type { NpmSkill, SymlinkOptions, SymlinkResult } from './types.ts'
 import { lstat, mkdir, readlink, rm, symlink } from 'node:fs/promises'
 import { platform } from 'node:os'
 import { dirname, join, relative, resolve } from 'node:path'
 import process from 'node:process'
-import { agents, detectInstalledAgents } from '../vendor/skills/src/agents.ts'
+import { agents, detectInstalledAgents } from './agents'
 
 async function createSymlink(target: string, linkPath: string): Promise<boolean> {
   try {
