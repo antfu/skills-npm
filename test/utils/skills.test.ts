@@ -42,7 +42,7 @@ describe('filterSkills', () => {
 describe('processSkills', () => {
   it('returns all skills when no filters provided', () => {
     const result = processSkills(mockSkills)
-    expect(result).toHaveLength(4)
+    expect(result.skills).toHaveLength(4)
     expect(result.excludedCount).toBe(0)
   })
 
