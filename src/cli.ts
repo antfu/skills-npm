@@ -12,8 +12,9 @@ import { resolveConfig } from './config.ts'
 import { isTTY } from './constants.ts'
 import { hasGitignorePattern, updateGitignore } from './gitignore.ts'
 import { printDryRun, printInvalidSkills, printLogo, printOutro, printSkills, printSymlinkResults } from './printer.ts'
-import { filterExcludedSkills, scanNodeModules } from './scan.ts'
+import { scanNodeModules } from './scan.ts'
 import { symlinkSkills } from './symlink.ts'
+import { processSkills } from './utils/index.ts'
 
 const cli: CAC = cac(name)
 
@@ -62,7 +63,7 @@ catch (error) {
 
 async function promptConfirm(skills: NpmSkill[], targetAgents: AgentType[]): Promise<void> {
   const result = await p.confirm({
-    message: `Create symlinks for ${c.yellow(skills.length.toString())} skill${skills.length > 1 ? 's' : ''} to ${c.yellow(targetAgents.length.toString())} agent${targetAgents.length > 1 ? 's' : ''}?`,
+    message: `Create symlinks for ${c.yellow(skills.length)} skill${skills.length > 1 ? 's' : ''} to ${c.yellow(targetAgents.length)} agent${targetAgents.length > 1 ? 's' : ''}?`,
   })
   if (p.isCancel(result) || !result) {
     p.outro(c.red('Operation cancelled'))
@@ -75,17 +76,22 @@ async function scanSkills(options: CommandOptions): Promise<NpmSkill[]> {
   spinner?.start('Scanning node_modules for skills...')
 
   const { skills: scannedSkills, invalidSkills, packageCount } = await scanNodeModules({ cwd: options.cwd })
-  const skills = filterExcludedSkills(scannedSkills, options.exclude)
-  const excludedCount = scannedSkills.length - skills.length
+
   const hasInvalidSkills = invalidSkills.length > 0
   const invalidCount = invalidSkills.length
 
+  const { skills, excludedCount } = processSkills(
+    scannedSkills,
+    options.include,
+    options.exclude,
+  )
+
   if (skills.length === 0) {
-    let msg = `Scanned ${packageCount} package${packageCount !== 1 ? 's' : ''}, no skills found`
+    let msg = `Scanned ${c.yellow(packageCount)} package${packageCount !== 1 ? 's' : ''}, no skills found`
     if (excludedCount > 0)
-      msg += ` (${excludedCount} excluded)`
+      msg += ` (${c.yellow(excludedCount)} filtered)`
     if (hasInvalidSkills)
-      msg += ` (${invalidCount} invalid)`
+      msg += ` (${c.yellow(invalidCount)} invalid)`
     if (isTTY) {
       spinner?.stop(msg)
       if (hasInvalidSkills)
@@ -102,7 +108,7 @@ async function scanSkills(options: CommandOptions): Promise<NpmSkill[]> {
 
   let message = `Scanned ${packageCount} package${packageCount !== 1 ? 's' : ''}, found ${skills.length} skill${skills.length !== 1 ? 's' : ''}`
   if (excludedCount > 0)
-    message += ` (${excludedCount} excluded)`
+    message += ` (${excludedCount} filtered)`
   if (hasInvalidSkills)
     message += ` (${invalidCount} invalid)`
   if (isTTY) {
