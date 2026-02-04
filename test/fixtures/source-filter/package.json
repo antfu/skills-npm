@@ -1,0 +1,9 @@
+{
+  "name": "test-source-filter",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@test-scope/test-pkg-b": "^1.0.0",
+    "test-pkg-a": "^1.0.0"
+  }
+}

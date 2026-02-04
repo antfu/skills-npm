@@ -4,6 +4,9 @@ export default antfu(
   {
     type: 'lib',
     pnpm: true,
-    ignores: ['vendor/**/*'],
+    ignores: [
+      'vendor/**/*',
+      'test/fixtures/**/*',
+    ],
   },
 )
