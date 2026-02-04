@@ -28,13 +28,23 @@ export async function searchForPackagesRoot(current: string): Promise<string[]> 
   })
 }
 
-export async function getWorkspacePackages(current: string): Promise<string[]> {
+async function readJSON(current: string): Promise<Record<string, any> | null> {
   const filepath = join(current, 'package.json')
   if (!existsSync(filepath))
-    return []
+    return null
 
-  const content = await readFile(filepath, 'utf-8')
-  const data = JSON.parse(content)
+  try {
+    return JSON.parse(await readFile(filepath, 'utf-8'))
+  }
+  catch {
+    return null
+  }
+}
+
+export async function getWorkspacePackages(current: string): Promise<string[]> {
+  const data = await readJSON(current)
+  if (!data)
+    return []
   return Array.isArray(data.workspaces) ? data.workspaces : []
 }
 
@@ -47,4 +57,11 @@ export async function getPnpmWorkspacePackages(current: string): Promise<string[
   const content = await readFile(pnpmWorkspacePath, 'utf-8')
   const data = parse(content)
   return Array.isArray(data.packages) ? data.packages : []
+}
+
+export async function getPackageVersion(packagePath: string): Promise<string | undefined> {
+  const data = await readJSON(packagePath)
+  if (!data)
+    return undefined
+  return data.version || undefined
 }

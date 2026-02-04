@@ -18,10 +18,23 @@ export function printLogo(): void {
   console.log()
 }
 
+function formatPackageMeta(packageName: string, packageVersion?: string): string {
+  return packageVersion ? `${packageName}@${packageVersion}` : packageName
+}
+
 export function printSkills(skills: NpmSkill[]): void {
-  for (const skill of skills) {
-    console.log(`  ${c.green('●')} ${c.bold(skill.name)} ${c.dim(`from ${skill.packageName}`)}`)
-    console.log(`    ${c.dim(skill.description)}`)
+  if (isTTY) {
+    for (const skill of skills) {
+      const pkg = formatPackageMeta(skill.packageName, skill.packageVersion)
+      console.log(`  ${c.green('●')} ${c.bold(skill.name)} ${c.dim(`from ${pkg}`)}`)
+      console.log(`    ${c.dim(skill.description)}`)
+    }
+  }
+  else {
+    for (const skill of skills) {
+      const pkg = formatPackageMeta(skill.packageName, skill.packageVersion)
+      console.log(`  - ${skill.name} (${pkg})`)
+    }
   }
 }
 
@@ -29,14 +42,16 @@ export function printInvalidSkills(invalidSkills: InvalidSkill[]): void {
   if (isTTY) {
     p.log.info('Invalid skills skipped:')
     for (const invalid of invalidSkills) {
-      console.log(`  ${c.yellow('⚠')} ${c.dim(invalid.packageName)}/${invalid.skillName}`)
+      const pkg = formatPackageMeta(invalid.packageName, invalid.packageVersion)
+      console.log(`  ${c.yellow('⚠')} ${c.dim(`${pkg}/${invalid.skillName}`)}`)
       console.log(`    ${c.dim(`Error: ${invalid.error}`)}`)
     }
   }
   else {
     console.log('Invalid skills skipped:')
     for (const invalid of invalidSkills) {
-      console.log(`  - ${invalid.packageName}/${invalid.skillName}: ${invalid.error}`)
+      const pkg = formatPackageMeta(invalid.packageName, invalid.packageVersion)
+      console.log(`  - ${pkg}/${invalid.skillName}: ${invalid.error}`)
     }
   }
 }

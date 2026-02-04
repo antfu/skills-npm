@@ -63,6 +63,10 @@ export interface NpmSkill {
    */
   packageName: string
   /**
+   * NPM package version
+   */
+  packageVersion?: string
+  /**
    * Skill directory name inside the package's skills/ folder
    */
   skillName: string
@@ -102,6 +106,10 @@ export interface InvalidSkill {
    * NPM package name
    */
   packageName: string
+  /**
+   * NPM package version
+   */
+  packageVersion?: string
   /**
    * Skill directory name
    */

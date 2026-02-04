@@ -114,21 +114,18 @@ async function scanSkills(options: ResolvedOptions): Promise<NpmSkill[]> {
     message += ` (${excludedCount} filtered)`
   if (hasInvalidSkills)
     message += ` (${invalidCount} invalid)`
-  if (isTTY) {
+  if (isTTY)
     spinner?.stop(message)
-    p.log.info('Discovered skills:')
-    printSkills(skills)
-    if (hasInvalidSkills)
-      printInvalidSkills(invalidSkills)
-  }
-  else {
+  else
     console.log(message)
-    for (const skill of skills) {
-      console.log(`  - ${skill.name} (${skill.packageName})`)
-    }
-    if (hasInvalidSkills)
-      printInvalidSkills(invalidSkills)
-  }
+
+  if (isTTY)
+    p.log.info('Discovered skills:')
+
+  printSkills(skills)
+
+  if (hasInvalidSkills)
+    printInvalidSkills(invalidSkills)
 
   return skills
 }
