@@ -3,11 +3,12 @@ import type { AgentType } from '../vendor/skills/src/types'
 export type { AgentConfig, AgentType, Skill } from '../vendor/skills/src/types'
 
 /**
- * Item to exclude - either a package name (string) or an object specifying specific skills
+ * Filter item - either a package name (string) or an object specifying specific skills
+ * Used by both include and exclude filters
  */
-export type ExcludeItem
-  = | string // package name to exclude entirely
-    | { package: string, skills: string[] } // specific skills to exclude from a package
+export type FilterItem
+  = | string // package name to filter
+    | { package: string, skills: string[] } // specific skills to filter from a package
 
 export interface CommandOptions {
   /**
@@ -41,10 +42,15 @@ export interface CommandOptions {
    */
   dryRun?: boolean
   /**
+   * Packages or skills to include (only these will be installed)
+   * @default undefined (include all)
+   */
+  include?: FilterItem[]
+  /**
    * Packages or skills to exclude from being installed
    * @default []
    */
-  exclude?: ExcludeItem[]
+  exclude?: FilterItem[]
 }
 
 export interface ResolvedOptions extends Omit<CommandOptions, 'agents'> {
@@ -160,4 +166,15 @@ export interface SymlinkResult {
    * Error message
    */
   error?: string
+}
+
+export interface FilterResult {
+  /**
+   * Skills that matched the filters
+   */
+  skills: NpmSkill[]
+  /**
+   * Number of skills filtered out
+   */
+  excludedCount: number
 }
