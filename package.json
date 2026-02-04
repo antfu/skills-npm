@@ -54,7 +54,8 @@
     "picocolors": "catalog:prod",
     "tinyglobby": "catalog:prod",
     "unconfig": "catalog:prod",
-    "xdg-basedir": "catalog:prod"
+    "xdg-basedir": "catalog:prod",
+    "yaml": "catalog:prod"
   },
   "devDependencies": {
     "@antfu/eslint-config": "catalog:dev",
@@ -74,8 +75,7 @@
     "typescript": "catalog:dev",
     "vite": "catalog:dev",
     "vitest": "catalog:testing",
-    "vitest-package-exports": "catalog:testing",
-    "yaml": "catalog:testing"
+    "vitest-package-exports": "catalog:testing"
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm lint-staged"

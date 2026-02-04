@@ -60,8 +60,6 @@ export default defineConfig({
   agents: ['cursor', 'windsurf'],
   // Scan recursively for monorepo packages (default: false)
   recursive: false,
-  // Paths to ignore when searching recursively
-  ignorePaths: ['**/test/**', '**/fixtures/**'],
   // Whether to update .gitignore (default: true)
   gitignore: true,
   // Skip confirmation prompts (default: false)
@@ -85,7 +83,6 @@ export default defineConfig({
 | `cwd` | `string` | Workspace root | Current working directory |
 | `agents` | `string \| string[]` | All detected | Target agents to install to |
 | `recursive` | `boolean` | `false` | Scan recursively for monorepo packages |
-| `ignorePaths` | `string \| string[]` | `[]` | Paths to ignore when searching recursively |
 | `gitignore` | `boolean` | `true` | Whether to update .gitignore |
 | `yes` | `boolean` | `false` | Skip confirmation prompts |
 | `dryRun` | `boolean` | `false` | Show what would be done without making changes |

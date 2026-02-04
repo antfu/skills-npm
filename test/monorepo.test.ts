@@ -5,13 +5,18 @@ import { scanNodeModules } from '../src/scan'
 
 const fixturesDir = join(dirname(fileURLToPath(import.meta.url)), 'fixtures')
 
-describe('monorepo', () => {
+const monorepoTypes = [
+  { name: 'pnpm-monorepo', path: 'pnpm-monorepo' },
+  { name: 'monorepo (npm workspaces)', path: 'monorepo' },
+] as const
+
+describe.each(monorepoTypes)('$name', ({ path }) => {
+  const monorepoPath = join(fixturesDir, path)
+
   it('should scan all packages recursively', async () => {
-    const monorepoPath = join(fixturesDir, 'monorepo')
     const result = await scanNodeModules({
       cwd: monorepoPath,
       recursive: true,
-      ignorePaths: [], // Override default ignore to allow scanning fixtures
     })
 
     expect(result.skills).toHaveLength(2)
@@ -32,7 +37,6 @@ describe('monorepo', () => {
   })
 
   it('should only scan current node_modules when recursive is false', async () => {
-    const monorepoPath = join(fixturesDir, 'monorepo')
     const result = await scanNodeModules({
       cwd: monorepoPath,
       recursive: false,

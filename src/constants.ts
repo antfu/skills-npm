@@ -9,17 +9,7 @@ export const DEFAULT_OPTIONS: CommandOptions = {
   yes: false,
   dryRun: false,
   exclude: [],
-  ignorePaths: [],
 }
-
-export const DEFAULT_IGNORE_PATHS = [
-  '**/node_modules/**',
-  '**/dist/**',
-  '**/public/**',
-  '**/fixture/**',
-  '**/fixtures/**',
-  '**/vendor/**',
-]
 
 export const LOGO_LINES = [
   '███████╗██╗  ██╗██╗██╗     ██╗     ███████╗      ███╗   ██╗██████╗ ███╗   ███╗',

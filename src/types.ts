@@ -45,16 +45,10 @@ export interface CommandOptions {
    * @default []
    */
   exclude?: ExcludeItem[]
-  /**
-   * Paths to ignore when searching recursively
-   * @default []
-   */
-  ignorePaths?: string | string[]
 }
 
-export interface ResolvedOptions extends Omit<CommandOptions, 'agents' | 'ignorePaths'> {
+export interface ResolvedOptions extends Omit<CommandOptions, 'agents'> {
   agents: AgentType[]
-  ignorePaths: string[]
 }
 
 export interface NpmSkill {
@@ -95,11 +89,6 @@ export interface ScanOptions {
    * @default false
    */
   recursive?: boolean
-  /**
-   * Paths to ignore when searching recursively
-   * @default []
-   */
-  ignorePaths?: string[]
 }
 
 export interface InvalidSkill {

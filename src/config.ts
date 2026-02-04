@@ -37,8 +37,6 @@ export async function resolveConfig(options: Partial<CommandOptions>): Promise<R
   merged.cwd = merged.cwd || searchForWorkspaceRoot(process.cwd())
   if (merged.agents)
     merged.agents = Array.isArray(merged.agents) ? merged.agents : [merged.agents]
-  if (merged.ignorePaths)
-    merged.ignorePaths = Array.isArray(merged.ignorePaths) ? merged.ignorePaths : [merged.ignorePaths]
 
   return merged as ResolvedOptions
 }

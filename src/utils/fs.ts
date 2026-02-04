@@ -1,5 +1,7 @@
+import { existsSync } from 'node:fs'
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { glob } from 'tinyglobby'
-import { DEFAULT_IGNORE_PATHS } from '../constants'
 
 export function isDirectoryOrSymlink(entry: {
   isDirectory: () => boolean
@@ -9,19 +11,40 @@ export function isDirectoryOrSymlink(entry: {
 }
 
 /**
- * Search for all package.json files recursively in a workspace
  * Used for monorepo support to find all packages that may have their own node_modules
  */
-export async function searchForPackagesRoot(
-  current: string,
-  ignorePaths: string[],
-): Promise<string[]> {
-  return glob('**/package.json', {
-    ignore: DEFAULT_IGNORE_PATHS.concat(ignorePaths),
+export async function searchForPackagesRoot(current: string): Promise<string[]> {
+  const patterns = [
+    ...await getPnpmWorkspacePackages(current),
+    ...await getWorkspacePackages(current),
+  ]
+  if (patterns.length === 0)
+    return []
+
+  return await glob(patterns, {
     cwd: current,
-    onlyFiles: true,
-    dot: false,
-    expandDirectories: false,
     absolute: true,
+    onlyDirectories: true,
   })
+}
+
+export async function getWorkspacePackages(current: string): Promise<string[]> {
+  const filepath = join(current, 'package.json')
+  if (!existsSync(filepath))
+    return []
+
+  const content = await readFile(filepath, 'utf-8')
+  const data = JSON.parse(content)
+  return Array.isArray(data.workspaces) ? data.workspaces : []
+}
+
+export async function getPnpmWorkspacePackages(current: string): Promise<string[]> {
+  const pnpmWorkspacePath = join(current, 'pnpm-workspace.yaml')
+  if (!existsSync(pnpmWorkspacePath))
+    return []
+
+  const { parse } = await import('yaml')
+  const content = await readFile(pnpmWorkspacePath, 'utf-8')
+  const data = parse(content)
+  return Array.isArray(data.packages) ? data.packages : []
 }

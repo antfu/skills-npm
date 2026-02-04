@@ -6,7 +6,7 @@ import type {
   ScanResult,
 } from './types'
 import { readdir, stat } from 'node:fs/promises'
-import { dirname, join } from 'node:path'
+import { join } from 'node:path'
 import process from 'node:process'
 import {
   createTargetName,
@@ -31,9 +31,9 @@ export async function scanNodeModulesRecursively(options: ScanOptions): Promise<
     packageCount: 0,
   }
 
-  const packagePaths = await searchForPackagesRoot(cwd, options.ignorePaths || [])
+  const packagePaths = await searchForPackagesRoot(cwd)
   for (const packagePath of packagePaths) {
-    const { skills, invalidSkills, packageCount } = await scanCurrentNodeModules(dirname(packagePath))
+    const { skills, invalidSkills, packageCount } = await scanCurrentNodeModules(packagePath)
 
     skills.forEach((skill) => {
       if (!scanResult.skills.has(skill.packageName))
