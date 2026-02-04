@@ -59,9 +59,15 @@ export async function getPnpmWorkspacePackages(current: string): Promise<string[
   return Array.isArray(data.packages) ? data.packages : []
 }
 
-export async function getPackageVersion(packagePath: string): Promise<string | undefined> {
-  const data = await readJSON(packagePath)
-  if (!data)
-    return undefined
-  return data.version || undefined
+const packageVersionCache = new Map<string, string | undefined>()
+
+export async function getPackageVersion(name: string, path: string): Promise<string | undefined> {
+  if (packageVersionCache.has(name))
+    return packageVersionCache.get(name)
+
+  const data = await readJSON(path)
+  const version = data?.version
+  packageVersionCache.set(name, version)
+
+  return version
 }

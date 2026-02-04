@@ -112,14 +112,13 @@ export async function scanPackageForSkills(nodeModulesPath: string, packageName:
   const packagePath = join(nodeModulesPath, packageName)
   const skillsDir = join(packagePath, 'skills')
 
-  const packageVersion = await getPackageVersion(packagePath)
-
   try {
     const skillsDirStats = await stat(skillsDir)
     if (!skillsDirStats.isDirectory())
       return { skills, invalidSkills }
 
     const entries = await readdir(skillsDir, { withFileTypes: true })
+    const packageVersion = await getPackageVersion(packageName, packagePath)
 
     for (const entry of entries) {
       if (!entry.isDirectory())
