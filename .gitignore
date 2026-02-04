@@ -12,7 +12,7 @@ node_modules
 temp
 
 # Agent skills from npm packages (managed by skills-npm)
-skills/npm-*
+**/skills/npm-*
 .claude
 .cursor
 .qwen

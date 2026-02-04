@@ -31,4 +31,5 @@ export const GRAYS = [
 export const RESET = '\x1B[0m'
 
 export const GITIGNORE_PATTERN = '**/skills/npm-*'
+export const LEGACY_GITIGNORE_PATTERN = 'skills/npm-*'
 export const GITIGNORE_COMMENT = '# Agent skills from npm packages (managed by skills-npm)'
