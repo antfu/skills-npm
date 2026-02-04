@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { toArray } from '@antfu/utils'
 import { glob } from 'tinyglobby'
 
 export function isDirectoryOrSymlink(entry: {
@@ -56,7 +57,21 @@ export async function getPnpmWorkspacePackages(current: string): Promise<string[
   const { parse } = await import('yaml')
   const content = await readFile(pnpmWorkspacePath, 'utf-8')
   const data = parse(content)
-  return Array.isArray(data.packages) ? data.packages : []
+  return toArray(data.packages)
+}
+
+export async function getPackageDeps(current: string): Promise<string[]> {
+  const filepath = join(current, 'package.json')
+  if (!existsSync(filepath))
+    return []
+
+  const content = await readFile(filepath, 'utf-8')
+  const data = JSON.parse(content)
+  const deps = {
+    ...data.dependencies,
+    ...data.devDependencies,
+  }
+  return Object.keys(deps)
 }
 
 const packageVersionCache = new Map<string, string | undefined>()

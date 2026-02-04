@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import process from 'node:process'
 import {
   createTargetName,
+  getPackageDeps,
   getPackageVersion,
   hasValidSkillMd,
   isDirectoryOrSymlink,
@@ -14,7 +15,7 @@ import {
 export async function scanNodeModules(options: ScanOptions = {}): Promise<ScanResult> {
   const cwd = options.cwd || searchForWorkspaceRoot(process.cwd())
   if (!options.recursive)
-    return scanCurrentNodeModules(cwd)
+    return scanCurrentNodeModules(cwd, options.source)
   return scanNodeModulesRecursively({ ...options, cwd })
 }
 
@@ -28,7 +29,10 @@ export async function scanNodeModulesRecursively(options: ScanOptions): Promise<
 
   const rootPaths = await searchForPackagesRoot(cwd)
   for (const dir of rootPaths) {
-    const { skills, invalidSkills, packageCount } = await scanCurrentNodeModules(dir)
+    const { skills, invalidSkills, packageCount } = await scanCurrentNodeModules(
+      dir,
+      options.source,
+    )
 
     skills.forEach((skill) => {
       if (!scanResult.skills.has(skill.packageName))
@@ -54,11 +58,13 @@ export async function scanNodeModulesRecursively(options: ScanOptions): Promise<
  * Scan node_modules for packages that contain skills
  * Only scans first-level packages (not nested dependencies)
  */
-export async function scanCurrentNodeModules(cwd: string): Promise<ScanResult> {
+export async function scanCurrentNodeModules(cwd: string, source: ScanOptions['source'] = 'node_modules'): Promise<ScanResult> {
   const nodeModulesPath = join(cwd, 'node_modules')
   const allSkills: NpmSkill[] = []
   const allInvalidSkills: InvalidSkill[] = []
   let packageCount = 0
+
+  const packageNames = source === 'package.json' ? await getPackageDeps(cwd) : null
 
   try {
     const entries = await readdir(nodeModulesPath, { withFileTypes: true })
@@ -80,8 +86,13 @@ export async function scanCurrentNodeModules(cwd: string): Promise<ScanResult> {
           for (const scopedEntry of scopedEntries) {
             if (!isDirectoryOrSymlink(scopedEntry))
               continue
-            packageCount++
+
             const fullPackageName = `${entry.name}/${scopedEntry.name}`
+
+            if (packageNames && !packageNames.includes(fullPackageName))
+              continue
+
+            packageCount++
             const { skills, invalidSkills } = await scanPackageForSkills(nodeModulesPath, fullPackageName)
             allSkills.push(...skills)
             allInvalidSkills.push(...invalidSkills)
@@ -92,6 +103,9 @@ export async function scanCurrentNodeModules(cwd: string): Promise<ScanResult> {
         }
       }
       else {
+        if (packageNames && !packageNames.includes(entry.name))
+          continue
+
         packageCount++
         const { skills, invalidSkills } = await scanPackageForSkills(nodeModulesPath, entry.name)
         allSkills.push(...skills)

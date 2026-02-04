@@ -22,6 +22,7 @@ try {
     .command('', 'CLI to install agents skills that shipped with your installed npm packages')
     .option('--cwd <cwd>', 'Current working directory')
     .option('--agents, -a <agents>', 'Comma-separated list of agents to install to')
+    .option('--source, -s <source>', 'Source used to discover skills', { default: 'node_modules' })
     .option('--recursive, -r', 'Scan recursively for monorepo packages', { default: false })
     .option('--gitignore', 'Skip updating .gitignore', { default: true })
     .option('--yes', 'Skip confirmation prompts', { default: false })
@@ -77,6 +78,7 @@ async function scanSkills(options: ResolvedOptions): Promise<NpmSkill[]> {
 
   const { skills: scannedSkills, invalidSkills, packageCount } = await scanNodeModules({
     cwd: options.cwd,
+    source: options.source,
     recursive: options.recursive,
   })
 

@@ -22,6 +22,11 @@ export interface CommandOptions {
    */
   agents?: AgentType | AgentType[]
   /**
+   * Source to discover skills from
+   * @default 'node_modules'
+   */
+  source?: 'node_modules' | 'package.json'
+  /**
    * Whether to scan recursively for monorepo packages (defaults to false)
    * @default false
    */
@@ -94,6 +99,11 @@ export interface ScanOptions {
    * @default searchForWorkspaceRoot(process.cwd())
    */
   cwd?: string
+  /**
+   * Source to discover packages from
+   * @default 'node_modules'
+   */
+  source?: 'node_modules' | 'package.json'
   /**
    * Whether to scan recursively for monorepo packages (defaults to false)
    * @default false
