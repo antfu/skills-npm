@@ -25,9 +25,9 @@ export async function scanNodeModulesRecursively(options: ScanOptions): Promise<
     packageCount: 0,
   }
 
-  const packagePaths = await searchForPackagesRoot(cwd)
-  for (const packagePath of packagePaths) {
-    const { skills, invalidSkills, packageCount } = await scanCurrentNodeModules(packagePath)
+  const rootPaths = await searchForPackagesRoot(cwd)
+  for (const dir of rootPaths) {
+    const { skills, invalidSkills, packageCount } = await scanCurrentNodeModules(dir)
 
     skills.forEach((skill) => {
       if (!scanResult.skills.has(skill.packageName))
