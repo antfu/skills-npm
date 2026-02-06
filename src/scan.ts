@@ -2,6 +2,7 @@ import type { InvalidSkill, NpmSkill, ScanOptions, ScanResult } from './types.ts
 import { readdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import process from 'node:process'
+import { getLockFileHash, isCacheValid, readCache, writeCache } from './cache'
 import {
   createTargetName,
   getPackageDeps,
@@ -14,8 +15,21 @@ import {
 
 export async function scanNodeModules(options: ScanOptions = {}): Promise<ScanResult> {
   const cwd = options.cwd || searchForWorkspaceRoot(process.cwd())
+
+  // Check cache first (unless force is enabled)
+  if (!options.force) {
+    const lockFileInfo = await getLockFileHash(cwd)
+    if (lockFileInfo) {
+      const cache = await readCache(cwd)
+      if (isCacheValid(cache, lockFileInfo.hash)) {
+        // Lock file unchanged, use cached skills
+        return { skills: cache!.skills, invalidSkills: [], packageCount: 0, fromCache: true }
+      }
+    }
+  }
+
   if (!options.recursive)
-    return scanCurrentNodeModules(cwd, options.source)
+    return scanCurrentNodeModules(cwd, options.source, options.force)
   return scanNodeModulesRecursively({ ...options, cwd })
 }
 
@@ -32,6 +46,7 @@ export async function scanNodeModulesRecursively(options: ScanOptions): Promise<
     const { skills, invalidSkills, packageCount } = await scanCurrentNodeModules(
       dir,
       options.source,
+      options.force,
     )
 
     skills.forEach((skill) => {
@@ -54,11 +69,7 @@ export async function scanNodeModulesRecursively(options: ScanOptions): Promise<
   }
 }
 
-/**
- * Scan node_modules for packages that contain skills
- * Only scans first-level packages (not nested dependencies)
- */
-export async function scanCurrentNodeModules(cwd: string, source: ScanOptions['source'] = 'node_modules'): Promise<ScanResult> {
+export async function scanCurrentNodeModules(cwd: string, source: ScanOptions['source'] = 'node_modules', force?: boolean): Promise<ScanResult> {
   const nodeModulesPath = join(cwd, 'node_modules')
   const allSkills: NpmSkill[] = []
   const allInvalidSkills: InvalidSkill[] = []
@@ -115,6 +126,18 @@ export async function scanCurrentNodeModules(cwd: string, source: ScanOptions['s
   }
   catch {
     // The node_modules doesn't exist or isn't readable
+  }
+
+  // Save to cache
+  if (!force) {
+    const lockFileInfo = await getLockFileHash(cwd)
+    if (lockFileInfo) {
+      await writeCache(cwd, {
+        lockFileHash: lockFileInfo.hash,
+        lockFilePath: lockFileInfo.path,
+        skills: allSkills,
+      })
+    }
   }
 
   return { skills: allSkills, invalidSkills: allInvalidSkills, packageCount }

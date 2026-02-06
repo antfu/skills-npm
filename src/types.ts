@@ -56,6 +56,11 @@ export interface CommandOptions {
    * @default []
    */
   exclude?: FilterItem[]
+  /**
+   * Force full reload, ignore cache
+   * @default false
+   */
+  force?: boolean
 }
 
 export interface ResolvedOptions extends Omit<CommandOptions, 'agents'> {
@@ -109,6 +114,11 @@ export interface ScanOptions {
    * @default false
    */
   recursive?: boolean
+  /**
+   * Force full reload, ignore cache
+   * @default false
+   */
+  force?: boolean
 }
 
 export interface InvalidSkill {
@@ -143,6 +153,10 @@ export interface ScanResult {
    * Number of packages scanned
    */
   packageCount: number
+  /**
+   * Whether the result was loaded from cache
+   */
+  fromCache?: boolean
 }
 
 export interface SymlinkOptions {

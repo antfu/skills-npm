@@ -27,6 +27,7 @@ try {
     .option('--gitignore', 'Skip updating .gitignore', { default: true })
     .option('--yes', 'Skip confirmation prompts', { default: false })
     .option('--dry-run', 'Show what would be done without making changes', { default: false })
+    .option('--force', 'Force full reload, ignore cache', { default: false })
     .action(async (options: Partial<CommandOptions>) => {
       if (isTTY) {
         printLogo()
@@ -76,10 +77,11 @@ async function scanSkills(options: ResolvedOptions): Promise<NpmSkill[]> {
   const spinner = isTTY ? p.spinner() : null
   spinner?.start('Scanning node_modules for skills...')
 
-  const { skills: scannedSkills, invalidSkills, packageCount } = await scanNodeModules({
+  const { skills: scannedSkills, invalidSkills, packageCount, fromCache } = await scanNodeModules({
     cwd: options.cwd,
     source: options.source,
     recursive: options.recursive,
+    force: options.force,
   })
 
   const hasInvalidSkills = invalidSkills.length > 0
@@ -93,6 +95,8 @@ async function scanSkills(options: ResolvedOptions): Promise<NpmSkill[]> {
 
   if (skills.length === 0) {
     let msg = `Scanned ${c.yellow(packageCount)} package${packageCount !== 1 ? 's' : ''}, no skills found`
+    if (fromCache)
+      msg += ' (from cache)'
     if (excludedCount > 0)
       msg += ` (${c.yellow(excludedCount)} filtered)`
     if (hasInvalidSkills)
@@ -112,6 +116,8 @@ async function scanSkills(options: ResolvedOptions): Promise<NpmSkill[]> {
   }
 
   let message = `Scanned ${packageCount} package${packageCount !== 1 ? 's' : ''}, found ${skills.length} skill${skills.length !== 1 ? 's' : ''}`
+  if (fromCache)
+    message += ' (from cache)'
   if (excludedCount > 0)
     message += ` (${excludedCount} filtered)`
   if (hasInvalidSkills)
