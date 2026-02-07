@@ -139,6 +139,8 @@ See [PROPOSAL.md](./PROPOSAL.md#for-package-authors) for detailed instructions.
 Packages that ships their built-in skills:
 
 - [`@slidev/cli`](https://github.com/slidevjs/slidev)
+- [`eslint-vitest-rule-tester`](https://github.com/antfu-collective/eslint-vitest-rule-tester)
+- [`@vitejs/devtools-kit`](https://github.com/vitejs/devtools)
 
 > [!NOTE]
 > PR are welcome to add more packages that ships their built-in skills.
