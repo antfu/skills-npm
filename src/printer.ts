@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import type { InvalidSkill, NpmSkill, ResolvedOptions, SymlinkResult } from './types'
+import type { NpmSkill, ResolvedOptions, SkillInvalidInfo, SymlinkResult } from './types'
 import * as p from '@clack/prompts'
 import c from 'picocolors'
 import { GRAYS, isTTY, LOGO_LINES, RESET } from './constants'
@@ -38,7 +38,7 @@ export function printSkills(skills: NpmSkill[]): void {
   }
 }
 
-export function printInvalidSkills(invalidSkills: InvalidSkill[]): void {
+export function printInvalidSkills(invalidSkills: SkillInvalidInfo[]): void {
   if (isTTY) {
     p.log.info('Invalid skills skipped:')
     for (const invalid of invalidSkills) {

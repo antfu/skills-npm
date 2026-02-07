@@ -22,16 +22,24 @@ async function createSymlink(target: string, linkPath: string): Promise<boolean>
 
     try {
       const stats = await lstat(linkPath)
-      if (!stats.isSymbolicLink())
+
+      if (stats.isSymbolicLink()) {
+        // Check if existing symlink points to correct target
+        const existingTarget = await readlink(linkPath)
+        const resolvedExisting = resolve(dirname(linkPath), existingTarget)
+
+        if (resolvedExisting === resolvedTarget) {
+          // Symlink already exists and points to correct target
+          return true
+        }
+
+        // Symlink exists but points to wrong target, remove it
+        await rm(linkPath)
+      }
+      else {
+        // Not a symlink, remove it
         await rm(linkPath, { recursive: true })
-
-      const existingTarget = await readlink(linkPath)
-      const resolvedExisting = resolve(dirname(linkPath), existingTarget)
-
-      if (resolvedExisting === resolvedTarget)
-        return true
-
-      await rm(linkPath)
+      }
     }
     catch (err: unknown) {
       // Handle ELOOP (circular symlink) or ENOENT (doesn't exist)
@@ -43,6 +51,7 @@ async function createSymlink(target: string, linkPath: string): Promise<boolean>
           // If we can't remove it, symlink creation will fail
         }
       }
+      // ENOENT is expected if link doesn't exist, continue to create
     }
 
     // Create parent directory if needed
