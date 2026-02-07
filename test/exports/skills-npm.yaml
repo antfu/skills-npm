@@ -16,7 +16,7 @@
   isDirectoryOrSymlink: function
   processSkills: function
   sanitizePackageName: function
-  saveLockfile: function
+  saveCache: function
   scanCurrentNodeModules: function
   scanNodeModules: function
   scanNodeModulesRecursively: function

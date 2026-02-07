@@ -1,4 +1,4 @@
-import type { NpmSkill, ScanOptions, ScanResult, SkillInvalidInfo } from './types.ts'
+import type { NpmSkill, PackageManagerLockfileInfo, ScanOptions, ScanResult, SkillInvalidInfo } from './types.ts'
 import { readdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import process from 'node:process'
@@ -16,9 +16,10 @@ import {
 export async function scanNodeModules(options: ScanOptions = {}): Promise<ScanResult> {
   const cwd = options.cwd || searchForWorkspaceRoot(process.cwd())
 
+  let lockFileInfo: PackageManagerLockfileInfo | null = null
   // Check cache first (unless force is enabled)
   if (!options.force) {
-    const lockFileInfo = await getPackageManagerLockFileHash(cwd)
+    lockFileInfo = await getPackageManagerLockFileHash(cwd)
     if (lockFileInfo) {
       const lockfile = await readCache(cwd)
       if (lockfile && isCacheUpToDate(lockfile, lockFileInfo)) {
@@ -38,7 +39,8 @@ export async function scanNodeModules(options: ScanOptions = {}): Promise<ScanRe
     ? await scanNodeModulesRecursively(options)
     : await scanCurrentNodeModules(cwd, options.source)
 
-  await saveCache(cwd, result)
+  if (lockFileInfo)
+    await saveCache(cwd, result, lockFileInfo)
 
   return result
 }
@@ -79,16 +81,13 @@ export async function scanNodeModulesRecursively(options: ScanOptions): Promise<
   }
 }
 
-export async function saveCache(cwd: string, result: ScanResult): Promise<void> {
-  const lockFileInfo = await getPackageManagerLockFileHash(cwd)
-  if (lockFileInfo) {
-    await writeCache(cwd, {
-      lockfile: lockFileInfo,
-      skills: result.skills,
-      skillsInvalid: result.skillsInvalid,
-      rootPaths: result.rootPaths,
-    })
-  }
+export async function saveCache(cwd: string, result: ScanResult, lockFileInfo: PackageManagerLockfileInfo): Promise<void> {
+  await writeCache(cwd, {
+    lockfile: lockFileInfo,
+    skills: result.skills,
+    skillsInvalid: result.skillsInvalid,
+    rootPaths: result.rootPaths,
+  })
 }
 
 export async function scanCurrentNodeModules(cwd: string, source: ScanOptions['source'] = 'node_modules'): Promise<ScanResult> {
