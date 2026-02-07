@@ -33,7 +33,7 @@ describe.each(monorepoTypes)('$name', ({ path }) => {
     expect(skillB?.name).toBe('Another Skill B')
     expect(skillB?.description).toBe('Another test skill in pkg-b')
 
-    expect(result.packageCount).toBeGreaterThanOrEqual(2)
+    expect(result.packagesScanned).toBeGreaterThanOrEqual(2)
   })
 
   it('should only scan current node_modules when recursive is false', async () => {
@@ -43,6 +43,6 @@ describe.each(monorepoTypes)('$name', ({ path }) => {
     })
 
     expect(result.skills).toHaveLength(0)
-    expect(result.packageCount).toBe(0)
+    expect(result.packagesScanned).toBe(0)
   })
 })

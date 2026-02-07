@@ -121,7 +121,7 @@ export interface ScanOptions {
   force?: boolean
 }
 
-export interface InvalidSkill {
+export interface SkillInvalidInfo {
   /**
    * NPM package name
    */
@@ -140,7 +140,7 @@ export interface InvalidSkill {
   error: string
 }
 
-export interface ScanResult {
+export interface ScanResultBase {
   /**
    * Skills found in the scan
    */
@@ -148,15 +148,41 @@ export interface ScanResult {
   /**
    * Invalid skills found in the scan
    */
-  invalidSkills: InvalidSkill[]
+  skillsInvalid: SkillInvalidInfo[]
+  /**
+   * Root paths scanned
+   */
+  rootPaths: string[]
+}
+
+export interface ScanResult extends ScanResultBase {
   /**
    * Number of packages scanned
    */
-  packageCount: number
+  packagesScanned: number
+
   /**
    * Whether the result was loaded from cache
    */
   fromCache?: boolean
+}
+
+export interface PackageManagerLockfileInfo {
+  /**
+   * Hash of the package manager lockfile
+   */
+  hash: string
+  /**
+   * Path to the package manager lockfile
+   */
+  path: string
+}
+
+export interface SkillsNpmCache extends ScanResultBase {
+  /**
+   * Package manager lockfile information
+   */
+  lockfile: PackageManagerLockfileInfo
 }
 
 export interface SymlinkOptions {

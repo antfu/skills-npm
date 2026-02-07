@@ -63,6 +63,7 @@
     "@antfu/utils": "catalog:inlined",
     "@slidev/cli": "catalog:examples",
     "@types/node": "catalog:types",
+    "baseline-browser-mapping": "catalog:dev",
     "bumpp": "catalog:dev",
     "eslint": "catalog:dev",
     "lint-staged": "catalog:dev",

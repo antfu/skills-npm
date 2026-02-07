@@ -77,15 +77,15 @@ async function scanSkills(options: ResolvedOptions): Promise<NpmSkill[]> {
   const spinner = isTTY ? p.spinner() : null
   spinner?.start('Scanning node_modules for skills...')
 
-  const { skills: scannedSkills, invalidSkills, packageCount, fromCache } = await scanNodeModules({
+  const { skills: scannedSkills, skillsInvalid, packagesScanned, fromCache } = await scanNodeModules({
     cwd: options.cwd,
     source: options.source,
     recursive: options.recursive,
     force: options.force,
   })
 
-  const hasInvalidSkills = invalidSkills.length > 0
-  const invalidCount = invalidSkills.length
+  const hasInvalidSkills = skillsInvalid.length > 0
+  const invalidCount = skillsInvalid.length
 
   const { skills, excludedCount } = processSkills(
     scannedSkills,
@@ -94,7 +94,7 @@ async function scanSkills(options: ResolvedOptions): Promise<NpmSkill[]> {
   )
 
   if (skills.length === 0) {
-    let msg = `Scanned ${c.yellow(packageCount)} package${packageCount !== 1 ? 's' : ''}, no skills found`
+    let msg = `Scanned ${c.yellow(packagesScanned)} package${packagesScanned !== 1 ? 's' : ''}, no skills found`
     if (fromCache)
       msg += ' (from cache)'
     if (excludedCount > 0)
@@ -104,18 +104,18 @@ async function scanSkills(options: ResolvedOptions): Promise<NpmSkill[]> {
     if (isTTY) {
       spinner?.stop(msg)
       if (hasInvalidSkills)
-        printInvalidSkills(invalidSkills)
+        printInvalidSkills(skillsInvalid)
       p.outro(c.dim('https://github.com/antfu/skills-npm'))
     }
     else {
       console.log(msg)
       if (hasInvalidSkills)
-        printInvalidSkills(invalidSkills)
+        printInvalidSkills(skillsInvalid)
     }
     process.exit(0)
   }
 
-  let message = `Scanned ${packageCount} package${packageCount !== 1 ? 's' : ''}, found ${skills.length} skill${skills.length !== 1 ? 's' : ''}`
+  let message = `Scanned ${packagesScanned} package${packagesScanned !== 1 ? 's' : ''}, found ${skills.length} skill${skills.length !== 1 ? 's' : ''}`
   if (fromCache)
     message += ' (from cache)'
   if (excludedCount > 0)
@@ -133,7 +133,7 @@ async function scanSkills(options: ResolvedOptions): Promise<NpmSkill[]> {
   printSkills(skills)
 
   if (hasInvalidSkills)
-    printInvalidSkills(invalidSkills)
+    printInvalidSkills(skillsInvalid)
 
   return skills
 }

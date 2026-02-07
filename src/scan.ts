@@ -1,8 +1,8 @@
-import type { InvalidSkill, NpmSkill, ScanOptions, ScanResult } from './types.ts'
+import type { NpmSkill, ScanOptions, ScanResult, SkillInvalidInfo } from './types.ts'
 import { readdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import process from 'node:process'
-import { getLockFileHash, isCacheValid, readCache, writeCache } from './cache'
+import { getPackageManagerLockFileHash, isCacheUpToDate, readCache, writeCache } from './cache.ts'
 import {
   createTargetName,
   getPackageDeps,
@@ -18,35 +18,44 @@ export async function scanNodeModules(options: ScanOptions = {}): Promise<ScanRe
 
   // Check cache first (unless force is enabled)
   if (!options.force) {
-    const lockFileInfo = await getLockFileHash(cwd)
+    const lockFileInfo = await getPackageManagerLockFileHash(cwd)
     if (lockFileInfo) {
-      const cache = await readCache(cwd)
-      if (isCacheValid(cache, lockFileInfo.hash)) {
+      const lockfile = await readCache(cwd)
+      if (lockfile && isCacheUpToDate(lockfile, lockFileInfo)) {
         // Lock file unchanged, use cached skills
-        return { skills: cache!.skills, invalidSkills: [], packageCount: 0, fromCache: true }
+        return {
+          skills: lockfile.skills,
+          skillsInvalid: lockfile.skillsInvalid,
+          rootPaths: lockfile.rootPaths,
+          packagesScanned: 0,
+          fromCache: true,
+        }
       }
     }
   }
 
-  if (!options.recursive)
-    return scanCurrentNodeModules(cwd, options.source, options.force)
-  return scanNodeModulesRecursively({ ...options, cwd })
+  const result = options.recursive
+    ? await scanNodeModulesRecursively(options)
+    : await scanCurrentNodeModules(cwd, options.source)
+
+  await saveCache(cwd, result)
+
+  return result
 }
 
 export async function scanNodeModulesRecursively(options: ScanOptions): Promise<ScanResult> {
   const cwd = options.cwd || searchForWorkspaceRoot(process.cwd())
   const scanResult = {
     skills: new Map<string, NpmSkill>(),
-    invalidSkills: new Map<string, InvalidSkill>(),
-    packageCount: 0,
+    invalidSkills: new Map<string, SkillInvalidInfo>(),
+    packagesScanned: 0,
   }
 
   const rootPaths = await searchForPackagesRoot(cwd)
   for (const dir of rootPaths) {
-    const { skills, invalidSkills, packageCount } = await scanCurrentNodeModules(
+    const { skills, skillsInvalid, packagesScanned } = await scanCurrentNodeModules(
       dir,
       options.source,
-      options.force,
     )
 
     skills.forEach((skill) => {
@@ -54,25 +63,38 @@ export async function scanNodeModulesRecursively(options: ScanOptions): Promise<
         scanResult.skills.set(skill.packageName, skill)
     })
 
-    invalidSkills.forEach((invalidSkill) => {
+    skillsInvalid.forEach((invalidSkill) => {
       if (!scanResult.invalidSkills.has(invalidSkill.packageName))
         scanResult.invalidSkills.set(invalidSkill.packageName, invalidSkill)
     })
 
-    scanResult.packageCount += packageCount
+    scanResult.packagesScanned += packagesScanned
   }
 
   return {
     skills: Array.from(scanResult.skills.values()),
-    invalidSkills: Array.from(scanResult.invalidSkills.values()),
-    packageCount: scanResult.packageCount,
+    skillsInvalid: Array.from(scanResult.invalidSkills.values()),
+    packagesScanned: scanResult.packagesScanned,
+    rootPaths,
   }
 }
 
-export async function scanCurrentNodeModules(cwd: string, source: ScanOptions['source'] = 'node_modules', force?: boolean): Promise<ScanResult> {
+export async function saveCache(cwd: string, result: ScanResult): Promise<void> {
+  const lockFileInfo = await getPackageManagerLockFileHash(cwd)
+  if (lockFileInfo) {
+    await writeCache(cwd, {
+      lockfile: lockFileInfo,
+      skills: result.skills,
+      skillsInvalid: result.skillsInvalid,
+      rootPaths: result.rootPaths,
+    })
+  }
+}
+
+export async function scanCurrentNodeModules(cwd: string, source: ScanOptions['source'] = 'node_modules'): Promise<ScanResult> {
   const nodeModulesPath = join(cwd, 'node_modules')
   const allSkills: NpmSkill[] = []
-  const allInvalidSkills: InvalidSkill[] = []
+  const allInvalidSkills: SkillInvalidInfo[] = []
   let packageCount = 0
 
   const packageNames = source === 'package.json' ? await getPackageDeps(cwd) : null
@@ -104,9 +126,9 @@ export async function scanCurrentNodeModules(cwd: string, source: ScanOptions['s
               continue
 
             packageCount++
-            const { skills, invalidSkills } = await scanPackageForSkills(nodeModulesPath, fullPackageName)
+            const { skills, skillsInvalid } = await scanPackageForSkills(nodeModulesPath, fullPackageName)
             allSkills.push(...skills)
-            allInvalidSkills.push(...invalidSkills)
+            allInvalidSkills.push(...skillsInvalid)
           }
         }
         catch {
@@ -118,9 +140,9 @@ export async function scanCurrentNodeModules(cwd: string, source: ScanOptions['s
           continue
 
         packageCount++
-        const { skills, invalidSkills } = await scanPackageForSkills(nodeModulesPath, entry.name)
+        const { skills, skillsInvalid } = await scanPackageForSkills(nodeModulesPath, entry.name)
         allSkills.push(...skills)
-        allInvalidSkills.push(...invalidSkills)
+        allInvalidSkills.push(...skillsInvalid)
       }
     }
   }
@@ -128,31 +150,24 @@ export async function scanCurrentNodeModules(cwd: string, source: ScanOptions['s
     // The node_modules doesn't exist or isn't readable
   }
 
-  // Save to cache
-  if (!force) {
-    const lockFileInfo = await getLockFileHash(cwd)
-    if (lockFileInfo) {
-      await writeCache(cwd, {
-        lockFileHash: lockFileInfo.hash,
-        lockFilePath: lockFileInfo.path,
-        skills: allSkills,
-      })
-    }
+  return {
+    skills: allSkills,
+    skillsInvalid: allInvalidSkills,
+    packagesScanned: packageCount,
+    rootPaths: [cwd],
   }
-
-  return { skills: allSkills, invalidSkills: allInvalidSkills, packageCount }
 }
 
-export async function scanPackageForSkills(nodeModulesPath: string, packageName: string): Promise<{ skills: NpmSkill[], invalidSkills: InvalidSkill[] }> {
+export async function scanPackageForSkills(nodeModulesPath: string, packageName: string): Promise<{ skills: NpmSkill[], skillsInvalid: SkillInvalidInfo[] }> {
   const skills: NpmSkill[] = []
-  const invalidSkills: InvalidSkill[] = []
+  const skillsInvalid: SkillInvalidInfo[] = []
   const packagePath = join(nodeModulesPath, packageName)
   const skillsDir = join(packagePath, 'skills')
 
   try {
     const skillsDirStats = await stat(skillsDir)
     if (!skillsDirStats.isDirectory())
-      return { skills, invalidSkills }
+      return { skills, skillsInvalid }
 
     const entries = await readdir(skillsDir, { withFileTypes: true })
     const packageVersion = await getPackageVersion(packageName, packagePath)
@@ -176,7 +191,7 @@ export async function scanPackageForSkills(nodeModulesPath: string, packageName:
         })
       }
       else {
-        invalidSkills.push({
+        skillsInvalid.push({
           packageName,
           packageVersion,
           skillName: entry.name,
@@ -189,5 +204,5 @@ export async function scanPackageForSkills(nodeModulesPath: string, packageName:
     // The skills/ directory doesn't exist or isn't readable
   }
 
-  return { skills, invalidSkills }
+  return { skills, skillsInvalid }
 }

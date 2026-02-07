@@ -11,7 +11,7 @@ describe('scanCurrentNodeModules - source option', () => {
     const result = await scanCurrentNodeModules(sourceFilterPath, 'node_modules')
 
     expect(result.skills).toHaveLength(3)
-    expect(result.packageCount).toBe(3)
+    expect(result.packagesScanned).toBe(3)
 
     const skillA = result.skills.find(s => s.packageName === 'test-pkg-a')
     expect(skillA?.skillName).toBe('test-skill')
@@ -30,7 +30,7 @@ describe('scanCurrentNodeModules - source option', () => {
     const result = await scanCurrentNodeModules(sourceFilterPath, 'package.json')
 
     expect(result.skills).toHaveLength(2)
-    expect(result.packageCount).toBe(2)
+    expect(result.packagesScanned).toBe(2)
 
     const skillA = result.skills.find(s => s.packageName === 'test-pkg-a')
     expect(skillA).toBeDefined()
