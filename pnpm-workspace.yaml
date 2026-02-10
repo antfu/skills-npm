@@ -17,11 +17,11 @@ packages:
   - examples/*
 catalogs:
   dev:
-    '@antfu/eslint-config': ^7.2.0
+    '@antfu/eslint-config': ^7.4.1
     '@antfu/ni': ^28.2.0
     baseline-browser-mapping: ^2.9.19
-    bumpp: ^10.4.0
-    eslint: ^9.39.2
+    bumpp: ^10.4.1
+    eslint: ^10.0.0
     lint-staged: ^16.2.7
     publint: ^0.3.17
     simple-git: ^3.30.0
@@ -46,9 +46,9 @@ catalogs:
   testing:
     tinyexec: ^1.0.2
     vitest: ^4.0.18
-    vitest-package-exports: ^1.1.2
+    vitest-package-exports: ^1.2.0
   types:
-    '@types/node': ^25.1.0
+    '@types/node': ^25.2.2
 onlyBuiltDependencies:
   - esbuild
   - simple-git-hooks
