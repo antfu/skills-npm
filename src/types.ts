@@ -61,6 +61,11 @@ export interface CommandOptions {
    * @default false
    */
   force?: boolean
+  /**
+   * Clean up stale npm-* skills from agent directories
+   * @default true
+   */
+  cleanup?: boolean
 }
 
 export interface ResolvedOptions extends Omit<CommandOptions, 'agents'> {
@@ -222,6 +227,29 @@ export interface SymlinkResult {
   success: boolean
   /**
    * Error message
+   */
+  error?: string
+}
+
+export interface CleanupResult {
+  /**
+   * Agent the stale skill was cleaned from
+   */
+  agent: string
+  /**
+   * Target name of the stale skill (e.g., "npm-foo-bar")
+   */
+  targetName: string
+  /**
+   * Full path to the removed entry
+   */
+  targetPath: string
+  /**
+   * Whether the removal was successful
+   */
+  success: boolean
+  /**
+   * Error message if removal failed
    */
   error?: string
 }

@@ -1,5 +1,6 @@
 .:
   agents: object
+  cleanupStaleSkills: function
   createTargetName: function
   defineConfig: function
   detectInstalledAgents: function

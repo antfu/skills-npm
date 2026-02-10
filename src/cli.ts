@@ -10,9 +10,9 @@ import { agents, getAllAgentTypes, getDetectedAgents } from './agents'
 import { resolveConfig } from './config'
 import { isTTY } from './constants'
 import { hasGitignorePattern, updateGitignore } from './gitignore'
-import { printDryRun, printInvalidSkills, printLogo, printOutro, printSkills, printSymlinkResults } from './printer'
+import { printCleanupResults, printDryRun, printInvalidSkills, printLogo, printOutro, printSkills, printSymlinkResults } from './printer'
 import { scanNodeModules } from './scan'
-import { symlinkSkills } from './symlink'
+import { cleanupStaleSkills, symlinkSkills } from './symlink'
 import { processSkills } from './utils/index'
 
 const cli: CAC = cac(name)
@@ -28,6 +28,7 @@ try {
     .option('--yes', 'Skip confirmation prompts', { default: false })
     .option('--dry-run', 'Show what would be done without making changes', { default: false })
     .option('--force', 'Force full reload, ignore cache', { default: false })
+    .option('--cleanup', 'Clean up stale npm-* skills from agent directories', { default: true })
     .action(async (options: Partial<CommandOptions>) => {
       if (isTTY) {
         printLogo()
@@ -43,6 +44,9 @@ try {
         await promptConfirm(skills, targetAgents)
 
       const [totalCount, successCount] = await createSymlinks(skills, targetAgents, config)
+
+      if (config.cleanup !== false)
+        await cleanupStale(skills, targetAgents, config)
 
       if (config.gitignore !== false)
         await writeGitignore(config)
@@ -210,6 +214,35 @@ async function createSymlinks(skills: NpmSkill[], agents: AgentType[], options: 
   const totalCount = results.length
 
   return [totalCount, successCount]
+}
+
+async function cleanupStale(skills: NpmSkill[], agents: AgentType[], options: ResolvedOptions): Promise<number> {
+  const spinner = isTTY ? p.spinner() : null
+
+  if (options.dryRun && isTTY)
+    printDryRun('Would remove the following stale skills:')
+  else if (!options.dryRun && isTTY)
+    spinner?.start('Cleaning up stale skills...')
+
+  const results = await cleanupStaleSkills(skills, {
+    cwd: options.cwd,
+    dryRun: options.dryRun,
+    agents,
+  })
+
+  if (results.length > 0) {
+    const successCount = results.filter(r => r.success).length
+    if (!options.dryRun && isTTY)
+      spinner?.stop(`Cleaned up ${successCount} stale skill${successCount !== 1 ? 's' : ''}`)
+
+    printCleanupResults(results, options)
+  }
+  else {
+    if (!options.dryRun && isTTY)
+      spinner?.stop('No stale skills to clean up')
+  }
+
+  return results.length
 }
 
 async function writeGitignore(options: ResolvedOptions): Promise<void> {

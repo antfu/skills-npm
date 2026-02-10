@@ -11,6 +11,7 @@ export const DEFAULT_OPTIONS: CommandOptions = {
   dryRun: false,
   exclude: [],
   force: false,
+  cleanup: true,
 }
 
 export const LOGO_LINES = [

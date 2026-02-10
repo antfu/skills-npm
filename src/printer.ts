@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import type { NpmSkill, ResolvedOptions, SkillInvalidInfo, SymlinkResult } from './types'
+import type { CleanupResult, NpmSkill, ResolvedOptions, SkillInvalidInfo, SymlinkResult } from './types'
 import * as p from '@clack/prompts'
 import c from 'picocolors'
 import { GRAYS, isTTY, LOGO_LINES, RESET } from './constants'
@@ -87,6 +87,35 @@ export function printOutro(totalCount: number, successCount: number, options: Re
     p.outro(c.yellow(`[Dry run] Would create ${totalCount} symlinks`))
   else
     p.outro(c.green(`✓ Created ${successCount}/${totalCount} symlinks`))
+}
+
+export function printCleanupResults(results: CleanupResult[], options: ResolvedOptions): void {
+  if (results.length === 0)
+    return
+
+  const agentsResult = new Map<string, CleanupResult[]>()
+  for (const result of results) {
+    const agentResults = agentsResult.get(result.agent) || []
+    agentResults.push(result)
+    agentsResult.set(result.agent, agentResults)
+  }
+
+  for (const [agent, agentResults] of agentsResult) {
+    const entries = agentResults.map((result) => {
+      const status = formatStatus(result.success)
+      const prefix = options.dryRun ? formatArrow() : status
+      return `${prefix} ${result.targetName}`
+    }).join(', ')
+
+    console.log(`  ${c.bold(agent)}: ${entries}`)
+    if (!isTTY)
+      return
+
+    const errors = agentResults.filter(r => !r.success && r.error)
+    for (const result of errors) {
+      console.log(`    ${c.red(result.error)}`)
+    }
+  }
 }
 
 export function printDryRun(message: string): void {
