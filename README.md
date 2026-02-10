@@ -141,6 +141,7 @@ Packages that ships their built-in skills:
 - [`@slidev/cli`](https://github.com/slidevjs/slidev)
 - [`eslint-vitest-rule-tester`](https://github.com/antfu-collective/eslint-vitest-rule-tester)
 - [`@vitejs/devtools-kit`](https://github.com/vitejs/devtools)
+- [`@vueuse/skills`](https://github.com/vueuse/vueuse/tree/main/packages/skills)
 
 > [!NOTE]
 > PR are welcome to add more packages that ships their built-in skills.
