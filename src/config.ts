@@ -38,7 +38,7 @@ export async function resolveConfig(options: Partial<CommandOptions>): Promise<R
 
   merged.cwd = merged.cwd || searchForWorkspaceRoot(process.cwd())
   merged.agents = toArray(merged.agents)
-  if ((merged.agents as string[]).includes('all'))
+  if ((merged.agents as string[]).includes('*'))
     merged.agents = getAllAgentTypes()
 
   return merged as ResolvedOptions
