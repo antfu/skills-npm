@@ -146,7 +146,9 @@ async function getTargetAgents(options: ResolvedOptions): Promise<AgentType[]> {
   let targetAgents: AgentType[]
 
   if (options.agents && options.agents.length > 0) {
-    targetAgents = options.agents as AgentType[]
+    targetAgents = (options.agents as string[]).includes('all')
+      ? getAllAgentTypes()
+      : options.agents as AgentType[]
   }
   else {
     const detectedAgents = await getDetectedAgents()
