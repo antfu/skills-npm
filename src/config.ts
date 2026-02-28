@@ -2,6 +2,7 @@ import type { CommandOptions, ResolvedOptions } from './types'
 import process from 'node:process'
 import { toArray } from '@antfu/utils'
 import { createConfigLoader } from 'unconfig'
+import { getAllAgentTypes } from './agents'
 import { DEFAULT_OPTIONS } from './constants'
 import { searchForWorkspaceRoot } from './utils/index'
 
@@ -37,6 +38,8 @@ export async function resolveConfig(options: Partial<CommandOptions>): Promise<R
 
   merged.cwd = merged.cwd || searchForWorkspaceRoot(process.cwd())
   merged.agents = toArray(merged.agents)
+  if ((merged.agents as string[]).includes('all'))
+    merged.agents = getAllAgentTypes()
 
   return merged as ResolvedOptions
 }
