@@ -160,25 +160,30 @@ async function getTargetAgents(options: ResolvedOptions): Promise<AgentType[]> {
     if (isTTY) {
       const agentOptions = detectedAgents.length > 0 ? detectedAgents : getAllAgentTypes()
 
-      const selected = await p.multiselect<string>({
-        message: detectedAgents.length > 0
-          ? 'Select agents to install to:'
-          : 'No agents detected. Select agents to install to:',
-        options: agentOptions
-          .map(agent => ({
-            value: agent,
-            label: agents[agent].displayName,
-          })),
-        required: true,
-        initialValues: detectedAgents.length > 0 ? detectedAgents : undefined,
-      })
-
-      if (p.isCancel(selected)) {
-        p.outro(c.red('Operation cancelled'))
-        process.exit(0)
+      if (options.yes) {
+        targetAgents = agentOptions
       }
+      else {
+        const selected = await p.multiselect<string>({
+          message: detectedAgents.length > 0
+            ? 'Select agents to install to:'
+            : 'No agents detected. Select agents to install to:',
+          options: agentOptions
+            .map(agent => ({
+              value: agent,
+              label: agents[agent].displayName,
+            })),
+          required: true,
+          initialValues: detectedAgents.length > 0 ? detectedAgents : undefined,
+        })
 
-      targetAgents = selected as AgentType[]
+        if (p.isCancel(selected)) {
+          p.outro(c.red('Operation cancelled'))
+          process.exit(0)
+        }
+
+        targetAgents = selected as AgentType[]
+      }
     }
   }
 
