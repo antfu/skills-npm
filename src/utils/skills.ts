@@ -1,7 +1,8 @@
-import type { FilterItem, FilterResult, NpmSkill } from '../types.ts'
+import type { FilterItem, FilterResult, NpmSkill } from '../types'
 import { readFile, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import matter from 'gray-matter'
+import { getPatternRegex, hasWildcard } from './pattern'
 
 export async function hasValidSkillMd(dir: string): Promise<{ valid: boolean, name?: string, description?: string, error?: string }> {
   try {
@@ -27,15 +28,21 @@ export async function hasValidSkillMd(dir: string): Promise<{ valid: boolean, na
   }
 }
 
+function matchesPackagePattern(packageName: string, pattern: string): boolean {
+  if (!hasWildcard(pattern))
+    return packageName === pattern
+  return getPatternRegex(pattern).test(packageName)
+}
+
 function matchesFilter(skill: NpmSkill, options: FilterItem[]): boolean {
   for (const item of options) {
     if (typeof item === 'string') {
-      if (skill.packageName === item)
+      if (matchesPackagePattern(skill.packageName, item))
         return true
     }
     else {
       if (
-        skill.packageName === item.package
+        matchesPackagePattern(skill.packageName, item.package)
         && item.skills.includes(skill.skillName)
       ) {
         return true

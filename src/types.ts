@@ -3,12 +3,12 @@ import type { AgentType } from '../vendor/skills/src/types'
 export type { AgentConfig, AgentType, Skill } from '../vendor/skills/src/types'
 
 /**
- * Filter item - either a package name (string) or an object specifying specific skills
+ * Filter item - either a package name/pattern (string) or an object specifying specific skills
  * Used by both include and exclude filters
  */
 export type FilterItem
-  = | string // package name to filter
-    | { package: string, skills: string[] } // specific skills to filter from a package
+  = | string // package name or wildcard pattern to filter
+    | { package: string, skills: string[] } // specific skills to filter from a package name or pattern
 
 export interface CommandOptions {
   /**
@@ -48,11 +48,13 @@ export interface CommandOptions {
   dryRun?: boolean
   /**
    * Packages or skills to include (only these will be installed)
+   * Supports package wildcard patterns like "@some/*"
    * @default undefined (include all)
    */
   include?: FilterItem[]
   /**
    * Packages or skills to exclude from being installed
+   * Supports package wildcard patterns like "@some/*"
    * @default []
    */
   exclude?: FilterItem[]

@@ -1,8 +1,8 @@
-import type { NpmSkill, PackageManagerLockfileInfo, ScanOptions, ScanResult, SkillInvalidInfo } from './types.ts'
+import type { NpmSkill, PackageManagerLockfileInfo, ScanOptions, ScanResult, SkillInvalidInfo } from './types'
 import { readdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import process from 'node:process'
-import { getPackageManagerLockFileHash, isCacheUpToDate, readCache, writeCache } from './cache.ts'
+import { getPackageManagerLockFileHash, isCacheUpToDate, readCache, writeCache } from './cache'
 import {
   createTargetName,
   getPackageDeps,
@@ -11,7 +11,7 @@ import {
   isDirectoryOrSymlink,
   searchForPackagesRoot,
   searchForWorkspaceRoot,
-} from './utils/index.ts'
+} from './utils'
 
 export async function scanNodeModules(options: ScanOptions = {}): Promise<ScanResult> {
   const cwd = options.cwd || searchForWorkspaceRoot(process.cwd())

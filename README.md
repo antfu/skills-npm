@@ -72,6 +72,10 @@ export default defineConfig({
   include: [
     // Include all skills from a package
     '@some/package',
+    // Include all skills from packages matching a wildcard pattern
+    '@some/*',
+    // Include specific skills from packages matching a wildcard pattern
+    { package: '@some/*', skills: ['integration'] },
     // Include specific skills from a package
     { package: '@slidev/cli', skills: ['presenter-mode'] },
   ],
@@ -79,11 +83,17 @@ export default defineConfig({
   exclude: [
     // Exclude all skills from a package
     '@some/package',
+    // Exclude all skills from packages matching a wildcard pattern
+    '@some/*',
+    // Exclude specific skills from packages matching a wildcard pattern
+    { package: '@some/*', skills: ['integration'] },
     // Exclude specific skills from a package
     { package: '@slidev/cli', skills: ['presenter-mode'] },
   ],
 })
 ```
+
+`include` and `exclude` support package wildcard patterns such as `@some/*`. These filters only apply to packages that were already discovered from `node_modules` or `package.json`.
 
 ### Options
 
@@ -96,8 +106,8 @@ export default defineConfig({
 | `gitignore` | `boolean` | `true` | Whether to update .gitignore |
 | `yes` | `boolean` | `false` | Skip confirmation prompts |
 | `dryRun` | `boolean` | `false` | Show what would be done without making changes |
-| `include` | `(string \| { package: string, skills: string[] })[]` | `undefined` | Packages or skills to include (only these will be installed) |
-| `exclude` | `(string \| { package: string, skills: string[] })[]` | `[]` | Packages or skills to exclude from being installed |
+| `include` | `(string \| { package: string, skills: string[] })[]` | `undefined` | Packages or skills to include. Supports package wildcard patterns like `@some/*` |
+| `exclude` | `(string \| { package: string, skills: string[] })[]` | `[]` | Packages or skills to exclude. Supports package wildcard patterns like `@some/*` |
 
 > The `cwd` defaults to the workspace root, which is detected by searching up for `pnpm-workspace.yaml`, `lerna.json`, or a `package.json` with `workspaces` field. Falls back to the nearest `package.json`.
 
