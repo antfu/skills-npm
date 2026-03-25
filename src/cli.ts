@@ -8,7 +8,7 @@ import c from 'picocolors'
 import { name, version } from '../package.json'
 import { agents, getAllAgentTypes, getDetectedAgents } from './agents'
 import { resolveConfig } from './config'
-import { isTTY } from './constants'
+import { isCI, isTTY } from './constants'
 import { hasGitignorePattern, updateGitignore } from './gitignore'
 import { printCleanupResults, printDryRun, printInvalidSkills, printLogo, printOutro, printSkills, printSymlinkResults } from './printer'
 import { scanNodeModules } from './scan'
@@ -153,8 +153,10 @@ async function getTargetAgents(options: ResolvedOptions): Promise<AgentType[]> {
     targetAgents = detectedAgents
 
     if (!isTTY && detectedAgents.length === 0) {
-      console.error('No agents detected. Use --agents to specify target agents')
-      process.exit(1)
+      const logger = isCI ? console.warn : console.error
+      const exitCode = isCI ? 0 : 1
+      logger('No agents detected. Use --agents to specify target agents')
+      process.exit(exitCode)
     }
 
     if (isTTY) {

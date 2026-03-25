@@ -3,6 +3,8 @@ import process from 'node:process'
 
 export const isTTY = process.stdout.isTTY
 
+export const isCI = Boolean(process.env.CI)
+
 export const DEFAULT_OPTIONS: CommandOptions = {
   source: 'node_modules',
   recursive: false,
