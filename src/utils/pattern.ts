@@ -1,4 +1,5 @@
 const patternCache = new Map<string, RegExp>()
+const REGEX_SPECIAL_CHAR_REGEX = /[|\\{}()[\]^$+?.]/g
 
 export function getPatternRegex(pattern: string): RegExp {
   const cached = patternCache.get(pattern)
@@ -39,5 +40,5 @@ export function hasWildcard(pattern: string): boolean {
 }
 
 function escapeRegexChar(char: string): string {
-  return char.replace(/[|\\{}()[\]^$+?.]/g, '\\$&')
+  return char.replace(REGEX_SPECIAL_CHAR_REGEX, '\\$&')
 }

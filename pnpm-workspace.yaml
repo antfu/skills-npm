@@ -17,7 +17,7 @@ packages:
   - examples/*
 catalogs:
   dev:
-    '@antfu/eslint-config': ^7.6.1
+    '@antfu/eslint-config': ^7.7.3
     '@antfu/ni': ^28.2.0
     baseline-browser-mapping: ^2.10.0
     bumpp: ^10.4.1

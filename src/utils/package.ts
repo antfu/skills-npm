@@ -1,7 +1,10 @@
+const LEADING_SCOPE_REGEX = /^@/
+const PACKAGE_SEPARATOR_REGEX = /\//g
+
 export function sanitizePackageName(packageName: string): string {
   return packageName
-    .replace(/^@/, '')
-    .replace(/\//g, '-')
+    .replace(LEADING_SCOPE_REGEX, '')
+    .replace(PACKAGE_SEPARATOR_REGEX, '-')
     .toLowerCase()
 }
 
