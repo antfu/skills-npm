@@ -8,9 +8,6 @@
 
 A CLI that discovers [agent skills](https://agentskills.io) shipped inside npm packages and creates symlinks for coding agents to consume.
 
-> [!IMPORTANT]
-> This project is a work in progress.
-
 ## Why?
 
 Current skill distribution approaches (e.g. [`@vercel-labs/skills`](https://github.com/vercel-labs/skills)) have friction:
