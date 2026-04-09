@@ -6,10 +6,10 @@ import type {
   SymlinkResult,
 } from './types'
 import { lstat, mkdir, readdir, readlink, rm, symlink } from 'node:fs/promises'
-import { platform } from 'node:os'
 import { dirname, join, relative, resolve } from 'node:path'
 import process from 'node:process'
 import { agents, detectInstalledAgents } from './agents'
+import { isWindows } from './constants'
 import { searchForWorkspaceRoot } from './utils'
 
 async function createSymlink(target: string, linkPath: string): Promise<boolean> {
@@ -59,11 +59,12 @@ async function createSymlink(target: string, linkPath: string): Promise<boolean>
     const linkDir = dirname(linkPath)
     await mkdir(linkDir, { recursive: true })
 
-    // Create relative symlink
-    const relativePath = relative(linkDir, target)
-    const symlinkType = platform() === 'win32' ? 'junction' : undefined
+    const symlinkTarget = isWindows
+      ? resolvedTarget
+      : relative(linkDir, resolvedTarget)
+    const symlinkType = isWindows ? 'junction' : undefined
 
-    await symlink(relativePath, linkPath, symlinkType)
+    await symlink(symlinkTarget, linkPath, symlinkType)
     return true
   }
   catch {
