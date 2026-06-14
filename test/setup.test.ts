@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { mergePrepare, PREPARE_TOKEN, wirePrepare } from '../src/setup'
+import { mergePrepare, wirePrepare } from '../src/setup'
 
 describe('mergePrepare', () => {
   it('returns the token when there is no prepare script', () => {
@@ -30,10 +30,6 @@ describe('mergePrepare', () => {
 
   it('does not false-match a command that merely contains the token', () => {
     expect(mergePrepare('my-skills-npm-wrapper build')).toBe('my-skills-npm-wrapper build && skills-npm')
-  })
-
-  it('exposes the token constant', () => {
-    expect(PREPARE_TOKEN).toBe('skills-npm')
   })
 })
 

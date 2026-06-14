@@ -289,17 +289,4 @@ export interface SetupResult {
      */
     after: string
   }
-  /**
-   * Outcome of updating .gitignore
-   */
-  gitignore: {
-    /**
-     * Whether .gitignore was (or would be) updated
-     */
-    updated: boolean
-    /**
-     * Whether .gitignore was (or would be) created
-     */
-    created: boolean
-  }
 }

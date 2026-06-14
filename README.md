@@ -108,7 +108,7 @@ export default defineConfig({
 | `source` | `'node_modules' \| 'package.json'` | `'package.json'` | Source to discover skills from |
 | `agents` | `string \| string[]` | All detected | Target agents to install to |
 | `recursive` | `boolean` | `false` | Scan recursively for monorepo packages |
-| `gitignore` | `boolean` | `true` | Whether `setup` updates .gitignore |
+| `gitignore` | `boolean` | `true` | Whether to update .gitignore |
 | `yes` | `boolean` | `false` | Skip confirmation prompts |
 | `dryRun` | `boolean` | `false` | Show what would be done without making changes |
 | `include` | `(string \| { package: string, skills: string[] })[]` | `undefined` | Packages or skills to include. Supports package wildcard patterns like `@some/*` |
@@ -120,7 +120,7 @@ export default defineConfig({
 
 ```bash
 skills-npm [options]          # discover and symlink skills (run by the prepare hook)
-skills-npm setup [options]    # wire up prepare + .gitignore, then sync (run once)
+skills-npm setup [options]    # add the prepare script, then run the first sync (run once)
 
 Options:
   --cwd <cwd>             Current working directory
@@ -131,12 +131,10 @@ Options:
   --dry-run               Show what would be done without making changes
   --force                 Force full reload, ignore cache
   --no-cleanup            Keep stale npm-* skills in agent directories
-  --no-gitignore          (setup only) Do not update .gitignore
+  --no-gitignore          Do not update .gitignore
   -h, --help              Display help
   -v, --version           Display version
 ```
-
-> The default command no longer manages `.gitignore`; that moved into `skills-npm setup`. Run `setup` once (or add the `**/skills/npm-*` pattern yourself).
 
 ## For Package Authors
 

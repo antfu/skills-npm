@@ -3,7 +3,6 @@ import { existsSync } from 'node:fs'
 import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import process from 'node:process'
-import { updateGitignore } from './gitignore'
 import { searchForWorkspaceRoot } from './utils/index'
 
 /**
@@ -11,7 +10,7 @@ import { searchForWorkspaceRoot } from './utils/index'
  * This is the plain sync command, not `skills-npm setup`, so it stays fast and
  * does not re-run setup on every install.
  */
-export const PREPARE_TOKEN = 'skills-npm'
+const PREPARE_TOKEN = 'skills-npm'
 
 const INDENT_RE = /^[\t ]+/m
 const CRLF_RE = /\r\n/
@@ -93,8 +92,8 @@ export async function wirePrepare(
 }
 
 /**
- * Bootstrap skills-npm in a project: wire the `prepare` script and register the
- * `.gitignore` pattern. The caller is expected to run the sync afterwards.
+ * Bootstrap skills-npm in a project by wiring the `prepare` script. The caller
+ * runs the sync afterwards, which symlinks skills and updates .gitignore.
  */
 export async function setupProject(options: ResolvedOptions): Promise<SetupResult> {
   const cwd = options.cwd || searchForWorkspaceRoot(process.cwd())
@@ -105,9 +104,5 @@ export async function setupProject(options: ResolvedOptions): Promise<SetupResul
 
   const prepare = await wirePrepare(packageJsonPath, options.dryRun)
 
-  let gitignore = { updated: false, created: false }
-  if (options.gitignore !== false)
-    gitignore = await updateGitignore(cwd, options.dryRun)
-
-  return { packageJsonPath, prepare, gitignore }
+  return { packageJsonPath, prepare }
 }

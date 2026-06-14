@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import type { CAC, Command } from 'cac'
+import type { CAC } from 'cac'
 import type { AgentType, CommandOptions, NpmSkill, ResolvedOptions } from './types'
 import process from 'node:process'
 import * as p from '@clack/prompts'
@@ -9,6 +9,7 @@ import { name, version } from '../package.json'
 import { agents, getAllAgentTypes, getDetectedAgents } from './agents'
 import { resolveConfig } from './config'
 import { isCI, isTTY } from './constants'
+import { hasGitignorePattern, updateGitignore } from './gitignore'
 import { printCleanupResults, printDryRun, printInvalidSkills, printLogo, printOutro, printSetupResults, printSkills, printSymlinkResults } from './printer'
 import { scanNodeModules } from './scan'
 import { setupProject } from './setup'
@@ -18,20 +19,44 @@ import { processSkills } from './utils/index'
 const cli: CAC = cac(name)
 
 try {
-  applyCommonOptions(
-    cli.command('', 'CLI to install agents skills that shipped with your installed npm packages'),
-  )
+  cli
+    .command('', 'CLI to install agents skills that shipped with your installed npm packages')
+    .option('--cwd <cwd>', 'Current working directory')
+    .option('--agents, -a <agents>', 'Comma-separated list of agents to install to')
+    .option('--source, -s <source>', 'Source used to discover skills', { default: 'package.json' })
+    .option('--recursive, -r', 'Scan recursively for monorepo packages', { default: false })
+    .option('--gitignore', 'Skip updating .gitignore', { default: true })
+    .option('--yes', 'Skip confirmation prompts', { default: false })
+    .option('--dry-run', 'Show what would be done without making changes', { default: false })
+    .option('--force', 'Force full reload, ignore cache', { default: false })
+    .option('--cleanup', 'Clean up stale npm-* skills from agent directories', { default: true })
     .action(async (options: Partial<CommandOptions>) => {
-      printIntro()
+      if (isTTY) {
+        printLogo()
+        p.intro(`${c.inverse(`${name}@${version}`)}`)
+      }
+
       const config = await resolveConfig(options)
       await runSync(config)
     })
 
-  applyCommonOptions(
-    cli.command('setup', 'Wire skills-npm into this project (prepare script + .gitignore), then sync'),
-  )
+  cli
+    .command('setup', 'Set up skills-npm in this project (prepare script + first sync)')
+    .option('--cwd <cwd>', 'Current working directory')
+    .option('--agents, -a <agents>', 'Comma-separated list of agents to install to')
+    .option('--source, -s <source>', 'Source used to discover skills', { default: 'package.json' })
+    .option('--recursive, -r', 'Scan recursively for monorepo packages', { default: false })
+    .option('--gitignore', 'Skip updating .gitignore', { default: true })
+    .option('--yes', 'Skip confirmation prompts', { default: false })
+    .option('--dry-run', 'Show what would be done without making changes', { default: false })
+    .option('--force', 'Force full reload, ignore cache', { default: false })
+    .option('--cleanup', 'Clean up stale npm-* skills from agent directories', { default: true })
     .action(async (options: Partial<CommandOptions>) => {
-      printIntro()
+      if (isTTY) {
+        printLogo()
+        p.intro(`${c.inverse(`${name}@${version}`)}`)
+      }
+
       const config = await resolveConfig(options)
       const result = await setupProject(config)
       printSetupResults(result, config)
@@ -236,25 +261,26 @@ async function cleanupStale(skills: NpmSkill[], agents: AgentType[], options: Re
   return results.length
 }
 
-function applyCommonOptions(command: Command): Command {
-  return command
-    .option('--cwd <cwd>', 'Current working directory')
-    .option('--agents, -a <agents>', 'Comma-separated list of agents to install to')
-    .option('--source, -s <source>', 'Source used to discover skills', { default: 'package.json' })
-    .option('--recursive, -r', 'Scan recursively for monorepo packages', { default: false })
-    // Accepted on every command for backward compatibility (existing `prepare`
-    // scripts may pass `--no-gitignore`), but only honored by `setup`.
-    .option('--gitignore', 'Update .gitignore during setup (default: true)', { default: true })
-    .option('--yes', 'Skip confirmation prompts', { default: false })
-    .option('--dry-run', 'Show what would be done without making changes', { default: false })
-    .option('--force', 'Force full reload, ignore cache', { default: false })
-    .option('--cleanup', 'Clean up stale npm-* skills from agent directories', { default: true })
-}
+async function writeGitignore(options: ResolvedOptions): Promise<void> {
+  const hasPattern = await hasGitignorePattern(options.cwd)
 
-function printIntro(): void {
-  if (isTTY) {
-    printLogo()
-    p.intro(`${c.inverse(`${name}@${version}`)}`)
+  if (hasPattern)
+    return
+
+  if (options.dryRun) {
+    printDryRun('Would update .gitignore with: skills/npm-*')
+    return
+  }
+
+  const { updated, created } = await updateGitignore(options.cwd)
+  if (updated) {
+    const msg = created
+      ? 'Created .gitignore with skills/npm-* pattern'
+      : 'Updated .gitignore with skills/npm-* pattern'
+    if (isTTY)
+      p.log.success(msg)
+    else
+      console.log(msg)
   }
 }
 
@@ -269,6 +295,9 @@ async function runSync(config: ResolvedOptions): Promise<void> {
 
   if (config.cleanup !== false)
     await cleanupStale(skills, targetAgents, config)
+
+  if (config.gitignore !== false)
+    await writeGitignore(config)
 
   printOutro(totalCount, successCount, config)
 }

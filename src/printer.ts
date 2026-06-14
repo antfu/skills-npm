@@ -2,7 +2,7 @@
 import type { CleanupResult, NpmSkill, ResolvedOptions, SetupResult, SkillInvalidInfo, SymlinkResult } from './types'
 import * as p from '@clack/prompts'
 import c from 'picocolors'
-import { GITIGNORE_PATTERN, GRAYS, isTTY, LOGO_LINES, RESET } from './constants'
+import { GRAYS, isTTY, LOGO_LINES, RESET } from './constants'
 
 function formatStatus(success: boolean): string {
   return success ? c.green('✓') : c.red('✗')
@@ -132,21 +132,13 @@ export function printSetupResults(result: SetupResult, options: ResolvedOptions)
     ? `${dry}${result.prepare.before ? 'Updated' : 'Added'} package.json "prepare" script: ${c.cyan(result.prepare.after)}`
     : 'package.json "prepare" script already runs skills-npm'
 
-  const gitignoreMsg = result.gitignore.updated
-    ? `${dry}${result.gitignore.created ? 'Created' : 'Updated'} .gitignore with ${c.cyan(GITIGNORE_PATTERN)}`
-    : undefined
-
   if (isTTY) {
     if (result.prepare.changed)
       p.log.success(prepareMsg)
     else
       p.log.info(prepareMsg)
-    if (gitignoreMsg)
-      p.log.success(gitignoreMsg)
   }
   else {
     console.log(prepareMsg)
-    if (gitignoreMsg)
-      console.log(gitignoreMsg)
   }
 }

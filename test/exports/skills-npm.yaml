@@ -15,8 +15,6 @@
   hasGitignorePattern: function
   hasValidSkillMd: function
   isDirectoryOrSymlink: function
-  mergePrepare: function
-  PREPARE_TOKEN: string
   processSkills: function
   sanitizePackageName: function
   saveCache: function
@@ -27,9 +25,7 @@
   searchForPackageRoot: function
   searchForPackagesRoot: function
   searchForWorkspaceRoot: function
-  setupProject: function
   symlinkSkill: function
   symlinkSkills: function
   updateGitignore: function
-  wirePrepare: function
 ./cli: {}
