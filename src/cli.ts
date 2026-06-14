@@ -30,7 +30,6 @@ try {
   applyCommonOptions(
     cli.command('setup', 'Wire skills-npm into this project (prepare script + .gitignore), then sync'),
   )
-    .option('--gitignore', 'Update .gitignore (default: true)', { default: true })
     .action(async (options: Partial<CommandOptions>) => {
       printIntro()
       const config = await resolveConfig(options)
@@ -243,6 +242,9 @@ function applyCommonOptions(command: Command): Command {
     .option('--agents, -a <agents>', 'Comma-separated list of agents to install to')
     .option('--source, -s <source>', 'Source used to discover skills', { default: 'package.json' })
     .option('--recursive, -r', 'Scan recursively for monorepo packages', { default: false })
+    // Accepted on every command for backward compatibility (existing `prepare`
+    // scripts may pass `--no-gitignore`), but only honored by `setup`.
+    .option('--gitignore', 'Update .gitignore during setup (default: true)', { default: true })
     .option('--yes', 'Skip confirmation prompts', { default: false })
     .option('--dry-run', 'Show what would be done without making changes', { default: false })
     .option('--force', 'Force full reload, ignore cache', { default: false })
