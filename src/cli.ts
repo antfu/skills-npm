@@ -199,6 +199,7 @@ async function getTargetAgents(options: ResolvedOptions): Promise<AgentType[]> {
             .map(agent => ({
               value: agent,
               label: agents[agent].displayName,
+              hint: detectedAgents.includes(agent) ? 'detected' : undefined,
             })),
           required: true,
           initialValues: detectedAgents.length > 0 ? detectedAgents : undefined,
