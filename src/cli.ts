@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import type { CAC } from 'cac'
 import type { AgentType, CommandOptions, NpmSkill, ResolvedOptions } from './types'
-import { realpathSync } from 'node:fs'
+import fs from 'node:fs'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import * as p from '@clack/prompts'
@@ -24,7 +24,7 @@ function isCliEntrypoint(): boolean {
   if (!entry)
     return false
   try {
-    return realpathSync(entry) === realpathSync(fileURLToPath(import.meta.url))
+    return fs.realpathSync(entry) === fs.realpathSync(fileURLToPath(import.meta.url))
   }
   catch {
     return false

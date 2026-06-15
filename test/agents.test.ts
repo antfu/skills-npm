@@ -1,6 +1,6 @@
-import { chmod, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import fs from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { delimiter, join } from 'node:path'
+import path from 'node:path'
 import process from 'node:process'
 import { describe, expect, it } from 'vitest'
 import { detectAgentsByCommand } from '../src/agents'
@@ -14,15 +14,15 @@ function present(...paths: string[]): (p: string) => Promise<boolean> {
   return async p => set.has(p)
 }
 
-const BIN = join('/', 'usr', 'bin')
-const BIN2 = join('/', 'usr', 'local', 'bin')
+const BIN = path.join('/', 'usr', 'bin')
+const BIN2 = path.join('/', 'usr', 'local', 'bin')
 
 describe('isCommandAvailable', () => {
   it('finds a command present on PATH (POSIX)', async () => {
     const ok = await isCommandAvailable('claude', {
       platform: 'linux',
-      env: { PATH: [BIN, BIN2].join(delimiter) },
-      isExecutableFile: present(join(BIN2, 'claude')),
+      env: { PATH: [BIN, BIN2].join(path.delimiter) },
+      isExecutableFile: present(path.join(BIN2, 'claude')),
     })
     expect(ok).toBe(true)
   })
@@ -49,14 +49,14 @@ describe('isCommandAvailable', () => {
     const probed: string[] = []
     const ok = await isCommandAvailable('claude', {
       platform: 'linux',
-      env: { PATH: ['', '', BIN, ''].join(delimiter) },
+      env: { PATH: ['', '', BIN, ''].join(path.delimiter) },
       isExecutableFile: async (p) => {
         probed.push(p)
         return false
       },
     })
     expect(ok).toBe(false)
-    expect(probed).toEqual([join(BIN, 'claude')])
+    expect(probed).toEqual([path.join(BIN, 'claude')])
   })
 
   // Note: a real Windows drive-letter dir (e.g. C:\bin) cannot be used here
@@ -67,7 +67,7 @@ describe('isCommandAvailable', () => {
     const ok = await isCommandAvailable('claude', {
       platform: 'win32',
       env: { Path: BIN, Pathext: '.EXE;.CMD;.BAT' },
-      isExecutableFile: present(join(BIN, 'claude.CMD')),
+      isExecutableFile: present(path.join(BIN, 'claude.CMD')),
     })
     expect(ok).toBe(true)
   })
@@ -76,7 +76,7 @@ describe('isCommandAvailable', () => {
     const ok = await isCommandAvailable('claude', {
       platform: 'win32',
       env: { Path: BIN, Pathext: '.EXE;.CMD;.BAT' },
-      isExecutableFile: present(join(BIN, 'claude')), // the extensionless file is not a PATHEXT candidate
+      isExecutableFile: present(path.join(BIN, 'claude')), // the extensionless file is not a PATHEXT candidate
     })
     expect(ok).toBe(false)
   })
@@ -85,7 +85,7 @@ describe('isCommandAvailable', () => {
     const ok = await isCommandAvailable('tool.exe', {
       platform: 'win32',
       env: { Path: BIN, Pathext: '.EXE;.CMD' },
-      isExecutableFile: present(join(BIN, 'tool.exe')),
+      isExecutableFile: present(path.join(BIN, 'tool.exe')),
     })
     expect(ok).toBe(true)
   })
@@ -93,13 +93,13 @@ describe('isCommandAvailable', () => {
   // Exercises the real defaultIsExecutableFile (stat + isFile guard + X_OK).
   // X_OK is a no-op on Windows, so this POSIX-specific check is skipped there.
   it.skipIf(process.platform === 'win32')('uses the real isFile and executable checks', async () => {
-    const dir = await mkdtemp(join(tmpdir(), 'skills-npm-cmd-'))
+    const dir = await fs.mkdtemp(path.join(tmpdir(), 'skills-npm-cmd-'))
     try {
-      await writeFile(join(dir, 'realcmd'), '#!/bin/sh\n')
-      await chmod(join(dir, 'realcmd'), 0o755)
-      await writeFile(join(dir, 'plainfile'), 'x')
-      await chmod(join(dir, 'plainfile'), 0o644)
-      await mkdir(join(dir, 'dircmd')) // a directory carries the exec bit on POSIX
+      await fs.writeFile(path.join(dir, 'realcmd'), '#!/bin/sh\n')
+      await fs.chmod(path.join(dir, 'realcmd'), 0o755)
+      await fs.writeFile(path.join(dir, 'plainfile'), 'x')
+      await fs.chmod(path.join(dir, 'plainfile'), 0o644)
+      await fs.mkdir(path.join(dir, 'dircmd')) // a directory carries the exec bit on POSIX
 
       const env = { PATH: dir }
       expect(await isCommandAvailable('realcmd', { platform: 'linux', env })).toBe(true)
@@ -108,7 +108,7 @@ describe('isCommandAvailable', () => {
       expect(await isCommandAvailable('missing', { platform: 'linux', env })).toBe(false)
     }
     finally {
-      await rm(dir, { recursive: true, force: true })
+      await fs.rm(dir, { recursive: true, force: true })
     }
   })
 })
@@ -119,7 +119,7 @@ describe('detectAgentsByCommand', () => {
   it('maps present commands to their agent types', async () => {
     const detected = await detectAgentsByCommand({
       ...base,
-      isExecutableFile: present(join(BIN, 'claude'), join(BIN, 'codex')),
+      isExecutableFile: present(path.join(BIN, 'claude'), path.join(BIN, 'codex')),
     })
     expect(detected).toContain('claude-code')
     expect(detected).toContain('codex')
@@ -129,13 +129,13 @@ describe('detectAgentsByCommand', () => {
   it('resolves cursor via cursor-agent, not the cursor IDE shim', async () => {
     const viaAgent = await detectAgentsByCommand({
       ...base,
-      isExecutableFile: present(join(BIN, 'cursor-agent')),
+      isExecutableFile: present(path.join(BIN, 'cursor-agent')),
     })
     expect(viaAgent).toContain('cursor')
 
     const viaShim = await detectAgentsByCommand({
       ...base,
-      isExecutableFile: present(join(BIN, 'cursor')),
+      isExecutableFile: present(path.join(BIN, 'cursor')),
     })
     expect(viaShim).not.toContain('cursor')
   })
@@ -143,7 +143,7 @@ describe('detectAgentsByCommand', () => {
   it('uses the disambiguated alias kilocode, not kilo', async () => {
     const detected = await detectAgentsByCommand({
       ...base,
-      isExecutableFile: present(join(BIN, 'kilocode')),
+      isExecutableFile: present(path.join(BIN, 'kilocode')),
     })
     expect(detected).toContain('kilo')
   })
@@ -152,10 +152,10 @@ describe('detectAgentsByCommand', () => {
     const detected = await detectAgentsByCommand({
       ...base,
       isExecutableFile: present(
-        join(BIN, 'pi'),
-        join(BIN, 'goose'),
-        join(BIN, 'code'),
-        join(BIN, 'vibe'),
+        path.join(BIN, 'pi'),
+        path.join(BIN, 'goose'),
+        path.join(BIN, 'code'),
+        path.join(BIN, 'vibe'),
       ),
     })
     expect(detected).toEqual([])
