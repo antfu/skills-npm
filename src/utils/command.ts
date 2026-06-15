@@ -2,21 +2,16 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
 
+/**
+ * Options for {@link isCommandAvailable}. Every field is a dependency-injection
+ * seam for tests; production callers pass nothing.
+ */
 export interface CommandProbeOptions {
-  /**
-   * Environment to read PATH/PATHEXT from. Defaults to `process.env`.
-   * Mainly a test seam.
-   */
+  /** Environment to read PATH/PATHEXT from. Defaults to `process.env`. */
   env?: NodeJS.ProcessEnv
-  /**
-   * Platform to assume. Defaults to `process.platform`.
-   * Mainly a test seam, so Windows behavior can be exercised cross-platform.
-   */
+  /** Platform to assume. Defaults to `process.platform` (lets Windows behavior be tested cross-platform). */
   platform?: NodeJS.Platform
-  /**
-   * Per-candidate executable check. Defaults to a `stat` + `access(X_OK)` probe.
-   * Mainly a test seam, so a synthetic file set can be supplied.
-   */
+  /** Per-candidate executable check. Defaults to a `stat` + `access(X_OK)` probe. */
   isExecutableFile?: (filePath: string) => Promise<boolean>
 }
 
