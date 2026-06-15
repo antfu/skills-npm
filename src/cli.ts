@@ -193,13 +193,12 @@ async function getTargetAgents(options: ResolvedOptions): Promise<AgentType[]> {
         ]
         const selected = await p.multiselect<string>({
           message: detectedAgents.length > 0
-            ? 'Select agents to install to (detected are pre-selected):'
+            ? 'Select agents to install to:'
             : 'No agents detected. Select agents to install to:',
           options: orderedAgents
             .map(agent => ({
               value: agent,
               label: agents[agent].displayName,
-              hint: detectedAgents.includes(agent) ? 'detected' : undefined,
             })),
           required: true,
           initialValues: detectedAgents.length > 0 ? detectedAgents : undefined,
