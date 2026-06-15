@@ -126,6 +126,15 @@ Options:
   -v, --version           Display version
 ```
 
+## Agent detection
+
+When `agents` is not set, `skills-npm` auto-detects which coding agents you use and installs to those. Detection combines two signals:
+
+- **Config directory** - an agent's home directory exists (e.g. `~/.cursor`, `~/.claude`).
+- **Installed command** - the agent's CLI is found on your `PATH` (e.g. `claude`, `codex`, `gemini`, `cursor-agent`). This catches agents that are installed but have not created their config directory yet.
+
+The command check is conservative: only agents with an unambiguous CLI name are probed, so generic names and GUI-only editors are matched by the directory check alone. Pass `--agents` (or set `agents` in the config) to bypass detection and target specific agents.
+
 ## For Package Authors
 
 Include a `skills/` directory in your package:

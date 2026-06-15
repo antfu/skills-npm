@@ -3,6 +3,7 @@
   cleanupStaleSkills: function
   createTargetName: function
   defineConfig: function
+  detectAgentsByCommand: function
   detectInstalledAgents: function
   filterSkills: function
   getAllAgentTypes: function
