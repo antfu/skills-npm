@@ -24,7 +24,7 @@ function isCliEntrypoint(): boolean {
   if (!entry)
     return false
   try {
-    return fs.realpathSync(entry) === fs.realpathSync(fileURLToPath(import.meta.url))
+    return fs.realpathSync(entry) === fileURLToPath(import.meta.url)
   }
   catch {
     return false
