@@ -14,8 +14,8 @@ function present(...paths: string[]): (p: string) => Promise<boolean> {
   return async p => set.has(p)
 }
 
-const BIN = path.join('/', 'usr', 'bin')
-const BIN2 = path.join('/', 'usr', 'local', 'bin')
+const BIN = '/usr/bin'
+const BIN2 = '/usr/local/bin'
 
 describe('isCommandAvailable', () => {
   it('finds a command present on PATH (POSIX)', async () => {
