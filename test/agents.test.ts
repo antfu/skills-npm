@@ -6,12 +6,9 @@ import { describe, expect, it } from 'vitest'
 import { detectAgentsByCommand } from '../src/agents'
 import { isCommandAvailable } from '../src/utils/command'
 
-// Build PATH and expected candidate paths with the same node:path primitives the
-// implementation uses, so assertions hold on POSIX and Windows runners alike.
-function makePath(...dirs: string[]): string {
-  return dirs.join(delimiter)
-}
-
+// PATH strings and expected candidate paths are built with node:path's `join`
+// and `delimiter` (the same primitives the implementation uses), so assertions
+// hold on POSIX and Windows runners alike.
 function present(...paths: string[]): (p: string) => Promise<boolean> {
   const set = new Set(paths)
   return async p => set.has(p)
@@ -24,7 +21,7 @@ describe('isCommandAvailable', () => {
   it('finds a command present on PATH (POSIX)', async () => {
     const ok = await isCommandAvailable('claude', {
       platform: 'linux',
-      env: { PATH: makePath(BIN, BIN2) },
+      env: { PATH: [BIN, BIN2].join(delimiter) },
       isExecutableFile: present(join(BIN2, 'claude')),
     })
     expect(ok).toBe(true)
@@ -33,7 +30,7 @@ describe('isCommandAvailable', () => {
   it('returns false when the command is not present', async () => {
     const ok = await isCommandAvailable('claude', {
       platform: 'linux',
-      env: { PATH: makePath(BIN) },
+      env: { PATH: BIN },
       isExecutableFile: async () => false,
     })
     expect(ok).toBe(false)
@@ -52,7 +49,7 @@ describe('isCommandAvailable', () => {
     const probed: string[] = []
     const ok = await isCommandAvailable('claude', {
       platform: 'linux',
-      env: { PATH: makePath('', '', BIN, '') },
+      env: { PATH: ['', '', BIN, ''].join(delimiter) },
       isExecutableFile: async (p) => {
         probed.push(p)
         return false
@@ -117,7 +114,7 @@ describe('isCommandAvailable', () => {
 })
 
 describe('detectAgentsByCommand', () => {
-  const base = { platform: 'linux' as const, env: { PATH: makePath(BIN) } }
+  const base = { platform: 'linux' as const, env: { PATH: BIN } }
 
   it('maps present commands to their agent types', async () => {
     const detected = await detectAgentsByCommand({
