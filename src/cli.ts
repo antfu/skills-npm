@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 import type { CAC } from 'cac'
 import type { AgentType, CommandOptions, NpmSkill, ResolvedOptions } from './types'
+import { realpathSync } from 'node:fs'
 import process from 'node:process'
+import { fileURLToPath } from 'node:url'
 import * as p from '@clack/prompts'
 import { cac } from 'cac'
 import c from 'picocolors'
@@ -16,6 +18,18 @@ import { cleanupStaleSkills, symlinkSkills } from './symlink'
 import { processSkills } from './utils/index'
 
 const cli: CAC = cac(name)
+
+function isCliEntrypoint(): boolean {
+  const entry = process.argv[1]
+  if (!entry)
+    return false
+  try {
+    return realpathSync(entry) === realpathSync(fileURLToPath(import.meta.url))
+  }
+  catch {
+    return false
+  }
+}
 
 try {
   cli
@@ -56,7 +70,12 @@ try {
 
   cli.help()
   cli.version(version)
-  cli.parse()
+
+  // Only run the CLI when executed directly (as the bin or via tsx), not when
+  // the module is imported (e.g. by the exports snapshot test), which would
+  // otherwise run a full sync as an import side effect.
+  if (isCliEntrypoint())
+    cli.parse()
 }
 catch (error) {
   const message = error instanceof Error ? error.message : 'Unknown error'
