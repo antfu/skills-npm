@@ -22,8 +22,6 @@ export interface CommandProbeOptions {
 
 const DEFAULT_PATHEXT = '.EXE;.CMD;.BAT;.COM'
 
-const cache = new Map<string, boolean>()
-
 async function defaultIsExecutableFile(filePath: string, isWindows: boolean): Promise<boolean> {
   try {
     const stats = await fs.stat(filePath) // follows symlinks (not lstat)
@@ -44,20 +42,11 @@ async function defaultIsExecutableFile(filePath: string, isWindows: boolean): Pr
  *
  * Zero-dependency, cross-platform scan: splits `PATH`, applies `PATHEXT` on
  * Windows, and verifies each candidate is a real file (and executable on POSIX).
- * Results are cached per command for the process lifetime, unless a test seam
- * (`env`, `platform`, or `isExecutableFile`) is provided.
  */
 export async function isCommandAvailable(
   command: string,
   options: CommandProbeOptions = {},
 ): Promise<boolean> {
-  const injected = options.env !== undefined
-    || options.platform !== undefined
-    || options.isExecutableFile !== undefined
-
-  if (!injected && cache.has(command))
-    return cache.get(command)!
-
   const env = options.env ?? process.env
   const isWindows = (options.platform ?? process.platform) === 'win32'
   const isExecutableFile = options.isExecutableFile
@@ -67,24 +56,20 @@ export async function isCommandAvailable(
   const pathValue = env.PATH ?? env.Path ?? ''
   const dirs = pathValue.split(path.delimiter).filter(Boolean) // drop empty segments (cwd footgun)
 
+  // On Windows, a bare name resolves via PATHEXT; otherwise (or when the command
+  // already has an extension) only the literal name is probed.
   const extensions = !isWindows || path.extname(command)
     ? ['']
     : (env.PATHEXT ?? env.Pathext ?? DEFAULT_PATHEXT).split(';').filter(Boolean)
 
-  let found = false
   for (const dir of dirs) {
     // probe extensions in parallel, but keep dir order for short-circuit semantics
     const hits = await Promise.all(
       extensions.map(extension => isExecutableFile(path.join(dir, command + extension))),
     )
-    if (hits.some(Boolean)) {
-      found = true
-      break
-    }
+    if (hits.some(Boolean))
+      return true
   }
 
-  if (!injected)
-    cache.set(command, found)
-
-  return found
+  return false
 }
