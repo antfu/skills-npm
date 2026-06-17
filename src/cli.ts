@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 import type { CAC } from 'cac'
 import type { AgentType, CommandOptions, NpmSkill, ResolvedOptions } from './types'
+import { realpathSync } from 'node:fs'
 import process from 'node:process'
+import { fileURLToPath } from 'node:url'
 import * as p from '@clack/prompts'
 import { cac } from 'cac'
 import c from 'picocolors'
@@ -10,12 +12,25 @@ import { agents, getAllAgentTypes, getDetectedAgents } from './agents'
 import { resolveConfig } from './config'
 import { isCI, isTTY } from './constants'
 import { hasGitignorePattern, updateGitignore } from './gitignore'
-import { printCleanupResults, printDryRun, printInvalidSkills, printLogo, printOutro, printSkills, printSymlinkResults } from './printer'
+import { printCleanupResults, printDryRun, printInvalidSkills, printLogo, printOutro, printSetupResults, printSkills, printSymlinkResults } from './printer'
 import { scanNodeModules } from './scan'
+import { setupProject } from './setup'
 import { cleanupStaleSkills, symlinkSkills } from './symlink'
 import { processSkills } from './utils/index'
 
 const cli: CAC = cac(name)
+
+function isCliEntrypoint(): boolean {
+  const entry = process.argv[1]
+  if (!entry)
+    return false
+  try {
+    return realpathSync(entry) === realpathSync(fileURLToPath(import.meta.url))
+  }
+  catch {
+    return false
+  }
+}
 
 try {
   cli
@@ -36,27 +51,40 @@ try {
       }
 
       const config = await resolveConfig(options)
+      await runSync(config)
+    })
 
-      const skills = await scanSkills(config)
-      const targetAgents = await getTargetAgents(config)
+  cli
+    .command('setup', 'Set up skills-npm in this project (prepare script + first sync)')
+    .option('--cwd <cwd>', 'Current working directory')
+    .option('--agents, -a <agents>', 'Comma-separated list of agents to install to')
+    .option('--source, -s <source>', 'Source used to discover skills', { default: 'package.json' })
+    .option('--recursive, -r', 'Scan recursively for monorepo packages', { default: false })
+    .option('--gitignore', 'Skip updating .gitignore', { default: true })
+    .option('--yes', 'Skip confirmation prompts', { default: false })
+    .option('--dry-run', 'Show what would be done without making changes', { default: false })
+    .option('--force', 'Force full reload, ignore cache', { default: false })
+    .option('--cleanup', 'Clean up stale npm-* skills from agent directories', { default: true })
+    .action(async (options: Partial<CommandOptions>) => {
+      if (isTTY) {
+        printLogo()
+        p.intro(`${c.inverse(`${name}@${version}`)}`)
+      }
 
-      if (isTTY && !config.dryRun && !config.yes)
-        await promptConfirm(skills, targetAgents)
-
-      const [totalCount, successCount] = await createSymlinks(skills, targetAgents, config)
-
-      if (config.cleanup !== false)
-        await cleanupStale(skills, targetAgents, config)
-
-      if (config.gitignore !== false)
-        await writeGitignore(config)
-
-      printOutro(totalCount, successCount, config)
+      const config = await resolveConfig(options)
+      const result = await setupProject(config)
+      printSetupResults(result, config)
+      await runSync(config)
     })
 
   cli.help()
   cli.version(version)
-  cli.parse()
+
+  // Only run the CLI when executed directly (as the bin or via tsx), not when
+  // the module is imported (e.g. by the exports snapshot test), which would
+  // otherwise run a full sync as an import side effect.
+  if (isCliEntrypoint())
+    cli.parse()
 }
 catch (error) {
   const message = error instanceof Error ? error.message : 'Unknown error'
@@ -160,17 +188,23 @@ async function getTargetAgents(options: ResolvedOptions): Promise<AgentType[]> {
     }
 
     if (isTTY) {
-      const agentOptions = detectedAgents.length > 0 ? detectedAgents : getAllAgentTypes()
+      const allAgents = getAllAgentTypes()
 
       if (options.yes) {
-        targetAgents = agentOptions
+        targetAgents = detectedAgents.length > 0 ? detectedAgents : allAgents
       }
       else {
+        // Offer every agent, with detected ones pre-selected and listed first,
+        // so you can both deselect detected agents and add undetected ones.
+        const orderedAgents = [
+          ...detectedAgents,
+          ...allAgents.filter(agent => !detectedAgents.includes(agent)),
+        ]
         const selected = await p.multiselect<string>({
           message: detectedAgents.length > 0
             ? 'Select agents to install to:'
             : 'No agents detected. Select agents to install to:',
-          options: agentOptions
+          options: orderedAgents
             .map(agent => ({
               value: agent,
               label: agents[agent].displayName,
@@ -273,4 +307,22 @@ async function writeGitignore(options: ResolvedOptions): Promise<void> {
     else
       console.log(msg)
   }
+}
+
+async function runSync(config: ResolvedOptions): Promise<void> {
+  const skills = await scanSkills(config)
+  const targetAgents = await getTargetAgents(config)
+
+  if (isTTY && !config.dryRun && !config.yes)
+    await promptConfirm(skills, targetAgents)
+
+  const [totalCount, successCount] = await createSymlinks(skills, targetAgents, config)
+
+  if (config.cleanup !== false)
+    await cleanupStale(skills, targetAgents, config)
+
+  if (config.gitignore !== false)
+    await writeGitignore(config)
+
+  printOutro(totalCount, successCount, config)
 }

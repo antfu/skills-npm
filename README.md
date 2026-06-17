@@ -23,11 +23,16 @@ This project proposes a convention: **ship skills inside npm packages**. When yo
 
 ## Usage
 
+Install as a dev dependency and run `setup` once:
+
 ```bash
 npm i -D skills-npm
+npx skills-npm setup
 ```
 
-Add a `prepare` script to your `package.json` so the skills are symlinked automatically for your agent whenever you install dependencies:
+`skills-npm setup` wires the tool into your `package.json` `prepare` script, adds the ignore pattern to your `.gitignore`, and runs the first sync. After that, skills are re-symlinked for your agent automatically whenever you install dependencies.
+
+`setup` merges into any existing `prepare` script (it appends with `&&` and is a no-op if already wired), resulting in:
 
 ```json
 {
@@ -38,11 +43,14 @@ Add a `prepare` script to your `package.json` so the skills are symlinked automa
 }
 ```
 
-`skills-npm` will symbol links the skills from `node_modules` to `skills/npm-<package-name>-<skill-name>` for your agent. It's recommend to add the following to your `.gitignore`:
+`skills-npm` symlinks the skills from `node_modules` to `skills/npm-<package-name>-<skill-name>` for your agent, and `setup` adds the following to your `.gitignore`:
 
 ```
-skills/npm-*
+**/skills/npm-*
 ```
+
+> [!NOTE]
+> Keep `skills-npm` as a `devDependency`. The `prepare` script runs on `install` (and before `publish`/`pack`), but never for people who install your published package, so it is safe to commit.
 
 ## Configuration
 
@@ -111,20 +119,33 @@ export default defineConfig({
 ## CLI Options
 
 ```bash
-skills-npm [options]
+skills-npm [options]          # discover and symlink skills (run by the prepare hook)
+skills-npm setup [options]    # add the prepare script, then run the first sync (run once)
 
 Options:
   --cwd <cwd>             Current working directory
   -s, --source <source>   Source to discover skills from (default: 'package.json')
   -a, --agents            Comma-separated list of agents to install to
   -r, --recursive         Scan recursively for monorepo packages
-  --ignore-paths <paths>  Ignore paths for searching package.json
-  --gitignore             Whether to update .gitignore (default: true)
   --yes                   Skip confirmation prompts
   --dry-run               Show what would be done without making changes
+  --force                 Force full reload, ignore cache
+  --no-cleanup            Keep stale npm-* skills in agent directories
+  --no-gitignore          Do not update .gitignore
   -h, --help              Display help
   -v, --version           Display version
 ```
+
+## Agent detection
+
+When `agents` is not set, `skills-npm` auto-detects which coding agents you use and installs to those. Detection combines two signals:
+
+- **Config directory** - an agent's home directory exists (e.g. `~/.cursor`, `~/.claude`).
+- **Installed command** - the agent's CLI is found on your `PATH` (e.g. `claude`, `codex`, `gemini`, `cursor-agent`). This catches agents that are installed but have not created their config directory yet.
+
+The command check is conservative: only agents with an unambiguous CLI name are probed, so generic names and GUI-only editors are matched by the directory check alone.
+
+In an interactive terminal, the prompt lists **all** agents with the detected ones pre-selected, so you can add or remove any. Non-interactively (e.g. from the `prepare` hook), the detected set is used directly. Pass `--agents` (or set `agents` in the config) to bypass detection entirely.
 
 ## For Package Authors
 

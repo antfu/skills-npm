@@ -8,7 +8,7 @@ import type {
 import { lstat, mkdir, readdir, readlink, rm, symlink } from 'node:fs/promises'
 import { dirname, join, relative, resolve } from 'node:path'
 import process from 'node:process'
-import { agents, detectInstalledAgents } from './agents'
+import { agents, getDetectedAgents } from './agents'
 import { isWindows } from './constants'
 import { searchForWorkspaceRoot } from './utils'
 
@@ -81,7 +81,7 @@ export async function symlinkSkill(skill: NpmSkill, options: SymlinkOptions = {}
   if (options.agents && options.agents.length > 0)
     targetAgents = options.agents as AgentType[]
   else
-    targetAgents = await detectInstalledAgents()
+    targetAgents = await getDetectedAgents()
 
   for (const agentType of targetAgents) {
     const agent = agents[agentType]
@@ -138,7 +138,7 @@ export async function cleanupStaleSkills(skills: NpmSkill[], options: SymlinkOpt
   if (options.agents && options.agents.length > 0)
     targetAgents = options.agents as AgentType[]
   else
-    targetAgents = await detectInstalledAgents()
+    targetAgents = await getDetectedAgents()
 
   for (const agentType of targetAgents) {
     const agent = agents[agentType]

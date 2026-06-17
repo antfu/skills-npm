@@ -266,3 +266,27 @@ export interface FilterResult {
    */
   excludedCount: number
 }
+
+export interface SetupResult {
+  /**
+   * Absolute path to the package.json that was (or would be) edited
+   */
+  packageJsonPath: string
+  /**
+   * Outcome of wiring the `prepare` script
+   */
+  prepare: {
+    /**
+     * Whether the prepare script was (or would be) changed
+     */
+    changed: boolean
+    /**
+     * The previous prepare script value, if any
+     */
+    before?: string
+    /**
+     * The resulting prepare script value
+     */
+    after: string
+  }
+}
