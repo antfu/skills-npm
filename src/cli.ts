@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import type { CAC } from 'cac'
 import type { AgentType, CommandOptions, NpmSkill, ResolvedOptions } from './types'
-import fs from 'node:fs'
+import { realpathSync } from 'node:fs'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import * as p from '@clack/prompts'
@@ -12,8 +12,9 @@ import { agents, getAllAgentTypes, getDetectedAgents } from './agents'
 import { resolveConfig } from './config'
 import { isCI, isTTY } from './constants'
 import { hasGitignorePattern, updateGitignore } from './gitignore'
-import { printCleanupResults, printDryRun, printInvalidSkills, printLogo, printOutro, printSkills, printSymlinkResults } from './printer'
+import { printCleanupResults, printDryRun, printInvalidSkills, printLogo, printOutro, printSetupResults, printSkills, printSymlinkResults } from './printer'
 import { scanNodeModules } from './scan'
+import { setupProject } from './setup'
 import { cleanupStaleSkills, symlinkSkills } from './symlink'
 import { processSkills } from './utils/index'
 
@@ -24,7 +25,7 @@ function isCliEntrypoint(): boolean {
   if (!entry)
     return false
   try {
-    return fs.realpathSync(entry) === fileURLToPath(import.meta.url)
+    return realpathSync(entry) === realpathSync(fileURLToPath(import.meta.url))
   }
   catch {
     return false
@@ -50,22 +51,30 @@ try {
       }
 
       const config = await resolveConfig(options)
+      await runSync(config)
+    })
 
-      const skills = await scanSkills(config)
-      const targetAgents = await getTargetAgents(config)
+  cli
+    .command('setup', 'Set up skills-npm in this project (prepare script + first sync)')
+    .option('--cwd <cwd>', 'Current working directory')
+    .option('--agents, -a <agents>', 'Comma-separated list of agents to install to')
+    .option('--source, -s <source>', 'Source used to discover skills', { default: 'package.json' })
+    .option('--recursive, -r', 'Scan recursively for monorepo packages', { default: false })
+    .option('--gitignore', 'Skip updating .gitignore', { default: true })
+    .option('--yes', 'Skip confirmation prompts', { default: false })
+    .option('--dry-run', 'Show what would be done without making changes', { default: false })
+    .option('--force', 'Force full reload, ignore cache', { default: false })
+    .option('--cleanup', 'Clean up stale npm-* skills from agent directories', { default: true })
+    .action(async (options: Partial<CommandOptions>) => {
+      if (isTTY) {
+        printLogo()
+        p.intro(`${c.inverse(`${name}@${version}`)}`)
+      }
 
-      if (isTTY && !config.dryRun && !config.yes)
-        await promptConfirm(skills, targetAgents)
-
-      const [totalCount, successCount] = await createSymlinks(skills, targetAgents, config)
-
-      if (config.cleanup !== false)
-        await cleanupStale(skills, targetAgents, config)
-
-      if (config.gitignore !== false)
-        await writeGitignore(config)
-
-      printOutro(totalCount, successCount, config)
+      const config = await resolveConfig(options)
+      const result = await setupProject(config)
+      printSetupResults(result, config)
+      await runSync(config)
     })
 
   cli.help()
@@ -298,4 +307,22 @@ async function writeGitignore(options: ResolvedOptions): Promise<void> {
     else
       console.log(msg)
   }
+}
+
+async function runSync(config: ResolvedOptions): Promise<void> {
+  const skills = await scanSkills(config)
+  const targetAgents = await getTargetAgents(config)
+
+  if (isTTY && !config.dryRun && !config.yes)
+    await promptConfirm(skills, targetAgents)
+
+  const [totalCount, successCount] = await createSymlinks(skills, targetAgents, config)
+
+  if (config.cleanup !== false)
+    await cleanupStale(skills, targetAgents, config)
+
+  if (config.gitignore !== false)
+    await writeGitignore(config)
+
+  printOutro(totalCount, successCount, config)
 }
