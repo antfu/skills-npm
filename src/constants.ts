@@ -1,9 +1,12 @@
 import type { CommandOptions } from './types'
+import { platform } from 'node:os'
 import process from 'node:process'
 
 export const isTTY = process.stdout.isTTY
 
 export const isCI = Boolean(process.env.CI)
+
+export const isWindows = platform() === 'win32'
 
 export const DEFAULT_OPTIONS: CommandOptions = {
   source: 'node_modules',
