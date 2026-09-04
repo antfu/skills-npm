@@ -1,6 +1,63 @@
 import type { NpmSkill } from '../../src/types'
-import { describe, expect, it } from 'vitest'
-import { filterSkills, processSkills } from '../../src/utils/skills'
+import { existsSync } from 'node:fs'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { filterSkills, hasValidSkillMd, processSkills } from '../../src/utils/skills'
+
+describe('hasValidSkillMd', () => {
+  let dir: string
+
+  beforeEach(async () => {
+    dir = await mkdtemp(join(tmpdir(), 'skills-npm-'))
+  })
+
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  async function writeSkill(content: string): Promise<void> {
+    await writeFile(join(dir, 'SKILL.md'), content, 'utf-8')
+  }
+
+  it('reads name and description from YAML frontmatter', async () => {
+    await writeSkill('---\nname: My Skill\ndescription: Does a thing\n---\n\n# Body\n')
+    expect(await hasValidSkillMd(dir)).toEqual({
+      valid: true,
+      name: 'My Skill',
+      description: 'Does a thing',
+    })
+  })
+
+  it('is invalid when required fields are missing', async () => {
+    await writeSkill('---\nname: Only Name\n---\n')
+    expect(await hasValidSkillMd(dir)).toEqual({ valid: false, error: 'missing_fields' })
+  })
+
+  it('is invalid when SKILL.md is absent', async () => {
+    expect(await hasValidSkillMd(dir)).toEqual({ valid: false, error: 'file_error' })
+  })
+
+  it('does not execute JavaScript frontmatter', async () => {
+    const marker = join(dir, 'pwned')
+    await writeSkill([
+      '---js',
+      'module.exports = (() => {',
+      `  require('node:fs').writeFileSync(${JSON.stringify(marker)}, '1')`,
+      '  return { name: \'x\', description: \'y\' }',
+      '})()',
+      '---',
+      '# Body',
+    ].join('\n'))
+
+    const result = await hasValidSkillMd(dir)
+
+    expect(existsSync(marker)).toBe(false)
+    // `---js` is not a plain YAML fence, so there is no usable metadata.
+    expect(result).toEqual({ valid: false, error: 'missing_fields' })
+  })
+})
 
 const mockSkills: NpmSkill[] = [
   { packageName: 'pkg-a', skillName: 'skill1', skillPath: '/a/skill1', targetName: 'npm-pkg-a-skill1', name: 'Skill 1', description: 'Desc 1' },
