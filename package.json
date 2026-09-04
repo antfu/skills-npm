@@ -1,7 +1,7 @@
 {
   "name": "skills-npm",
   "type": "module",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "packageManager": "pnpm@11.7.0",
   "description": "CLI to install agents skills that shipped with your installed npm packages",
   "author": "Anthony Fu <anthonyfu117@hotmail.com>",
