@@ -314,6 +314,23 @@ export interface SkillsNpmCache extends ScanResultBase {
    * Package manager lockfile information
    */
   lockfile: PackageManagerLockfileInfo
+  /**
+   * Scan options the cached result was produced with; a cache is only reused
+   * when these match, since `source` and `recursive` change which packages are
+   * scanned even when the lockfile is unchanged.
+   */
+  scan: ScanCacheKey
+}
+
+export interface ScanCacheKey {
+  /**
+   * Source the packages were discovered from
+   */
+  source: NonNullable<ScanOptions['source']>
+  /**
+   * Whether the scan walked workspace packages recursively
+   */
+  recursive: boolean
 }
 
 export interface SkillsNpmLockEntry {

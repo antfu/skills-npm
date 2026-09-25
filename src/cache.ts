@@ -1,4 +1,4 @@
-import type { PackageManagerLockfileInfo, SkillsNpmCache } from './types'
+import type { PackageManagerLockfileInfo, ScanCacheKey, SkillsNpmCache } from './types'
 import { createHash } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
@@ -9,9 +9,10 @@ const LOCK_FILE_PATH = 'node_modules/.skills-npm/cache.json'
 
 /**
  * Bumped when the cached skill shape changes (v2 renamed targetName from the
- * `npm-*` scheme to sanitized skill names), so stale v1 caches are discarded.
+ * `npm-*` scheme to sanitized skill names; v3 records the scan options), so
+ * stale caches from older versions are discarded.
  */
-export const CACHE_VERSION = 2
+export const CACHE_VERSION = 3
 
 export async function readCache(cwd: string): Promise<SkillsNpmCache | null> {
   try {
@@ -61,6 +62,11 @@ export async function getPackageManagerLockFileHash(cwd: string): Promise<Packag
 export function isCacheUpToDate(
   lockfile: SkillsNpmCache | null,
   lockFileInfo: PackageManagerLockfileInfo,
+  scan: ScanCacheKey,
 ): boolean {
-  return lockfile != null && lockfile.lockfile.hash === lockFileInfo.hash && lockfile.lockfile.path === lockFileInfo.path
+  return lockfile != null
+    && lockfile.lockfile.hash === lockFileInfo.hash
+    && lockfile.lockfile.path === lockFileInfo.path
+    && lockfile.scan?.source === scan.source
+    && lockfile.scan?.recursive === scan.recursive
 }

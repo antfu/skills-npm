@@ -1,4 +1,4 @@
-import type { InstalledPackage, NpmSkill, PackageManagerLockfileInfo, ScanOptions, ScanResult, SkillInvalidInfo } from './types'
+import type { InstalledPackage, NpmSkill, PackageManagerLockfileInfo, ScanCacheKey, ScanOptions, ScanResult, SkillInvalidInfo } from './types'
 import { readdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import process from 'node:process'
@@ -15,6 +15,10 @@ import {
 
 export async function scanNodeModules(options: ScanOptions = {}): Promise<ScanResult> {
   const cwd = options.cwd || searchForWorkspaceRoot(process.cwd())
+  const scanKey: ScanCacheKey = {
+    source: options.source ?? 'node_modules',
+    recursive: options.recursive ?? false,
+  }
 
   let lockFileInfo: PackageManagerLockfileInfo | null = null
   // Check cache first (unless force is enabled)
@@ -22,8 +26,8 @@ export async function scanNodeModules(options: ScanOptions = {}): Promise<ScanRe
     lockFileInfo = await getPackageManagerLockFileHash(cwd)
     if (lockFileInfo) {
       const lockfile = await readCache(cwd)
-      if (lockfile && isCacheUpToDate(lockfile, lockFileInfo)) {
-        // Lock file unchanged, use cached skills
+      if (lockfile && isCacheUpToDate(lockfile, lockFileInfo, scanKey)) {
+        // Lock file and scan options unchanged, use cached skills
         return {
           skills: lockfile.skills,
           skillsInvalid: lockfile.skillsInvalid,
@@ -40,7 +44,7 @@ export async function scanNodeModules(options: ScanOptions = {}): Promise<ScanRe
     : await scanCurrentNodeModules(cwd, options.source)
 
   if (lockFileInfo)
-    await saveCache(cwd, result, lockFileInfo)
+    await saveCache(cwd, result, lockFileInfo, scanKey)
 
   return result
 }
@@ -81,10 +85,11 @@ export async function scanNodeModulesRecursively(options: ScanOptions): Promise<
   }
 }
 
-export async function saveCache(cwd: string, result: ScanResult, lockFileInfo: PackageManagerLockfileInfo): Promise<void> {
+export async function saveCache(cwd: string, result: ScanResult, lockFileInfo: PackageManagerLockfileInfo, scan: ScanCacheKey): Promise<void> {
   await writeCache(cwd, {
     version: CACHE_VERSION,
     lockfile: lockFileInfo,
+    scan,
     skills: result.skills,
     skillsInvalid: result.skillsInvalid,
     rootPaths: result.rootPaths,
