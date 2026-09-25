@@ -12,34 +12,52 @@ import { agents, getDetectedAgents } from './agents'
 import { isWindows } from './constants'
 import { searchForWorkspaceRoot } from './utils'
 
-async function createSymlink(target: string, linkPath: string): Promise<boolean> {
+const MANAGED_TARGET_RE = /[\\/]node_modules[\\/].+[\\/]skills[\\/][^\\/]+[\\/]?$/
+
+/**
+ * Whether a symlink target is one skills-npm manages: a skill directory inside
+ * node_modules. Ownership is derived from the target, not from the link name,
+ * so committed links survive clones and no bookkeeping prefix is needed.
+ */
+export function isManagedTarget(resolvedTarget: string): boolean {
+  return MANAGED_TARGET_RE.test(resolvedTarget)
+}
+
+type LinkOutcome
+  = | { status: 'created' | 'skipped' }
+    | { status: 'failed', error: string }
+
+async function createSymlink(target: string, linkPath: string): Promise<LinkOutcome> {
   try {
     const resolvedTarget = resolve(target)
     const resolvedLinkPath = resolve(linkPath)
 
     // Don't create symlink to the same target
     if (resolvedTarget === resolvedLinkPath)
-      return true
+      return { status: 'created' }
 
     try {
       const stats = await lstat(linkPath)
 
       if (stats.isSymbolicLink()) {
-        // Check if existing symlink points to correct target
         const existingTarget = await readlink(linkPath)
         const resolvedExisting = resolve(dirname(linkPath), existingTarget)
 
-        if (resolvedExisting === resolvedTarget) {
-          // Symlink already exists and points to correct target
-          return true
-        }
+        // Symlink already exists and points to correct target
+        if (resolvedExisting === resolvedTarget)
+          return { status: 'created' }
 
-        // Symlink exists but points to wrong target, remove it
+        // A symlink we don't manage (e.g. created by the skills CLI or the
+        // user) occupies the name: never replace foreign content.
+        if (!isManagedTarget(resolvedExisting))
+          return { status: 'skipped' }
+
+        // Ours but pointing at the wrong skill, replace it
         await rm(linkPath)
       }
       else {
-        // Not a symlink, remove it
-        await rm(linkPath, { recursive: true })
+        // Real directory or file: not ours, leave it alone
+        return { status: 'skipped' }
       }
     }
     catch (err: unknown) {
@@ -59,16 +77,27 @@ async function createSymlink(target: string, linkPath: string): Promise<boolean>
     const linkDir = dirname(linkPath)
     await mkdir(linkDir, { recursive: true })
 
-    const symlinkTarget = isWindows
-      ? resolvedTarget
-      : relative(linkDir, resolvedTarget)
-    const symlinkType = isWindows ? 'junction' : undefined
+    const relativeTarget = relative(linkDir, resolvedTarget)
 
-    await symlink(symlinkTarget, linkPath, symlinkType)
-    return true
+    if (!isWindows) {
+      await symlink(relativeTarget, linkPath)
+      return { status: 'created' }
+    }
+
+    // Windows: prefer a real symlink (committable by git; needs Developer
+    // Mode or symlink privilege), fall back to a junction which git cannot
+    // represent as a symlink.
+    try {
+      await symlink(relativeTarget, linkPath, 'dir')
+      return { status: 'created' }
+    }
+    catch {
+      await symlink(resolvedTarget, linkPath, 'junction')
+      return { status: 'created' }
+    }
   }
-  catch {
-    return false
+  catch (err) {
+    return { status: 'failed', error: err instanceof Error ? err.message : 'Failed to create symlink' }
   }
 }
 
@@ -97,18 +126,22 @@ export async function symlinkSkill(skill: NpmSkill, options: SymlinkOptions = {}
         skill,
         agent: agentType,
         targetPath: linkPath,
-        success: true,
+        status: 'created',
       })
       continue
     }
 
-    const success = await createSymlink(skill.skillPath, linkPath)
+    const outcome = await createSymlink(skill.skillPath, linkPath)
     results.push({
       skill,
       agent: agentType,
       targetPath: linkPath,
-      success,
-      error: success ? undefined : 'Failed to create symlink',
+      status: outcome.status,
+      error: outcome.status === 'failed'
+        ? outcome.error
+        : outcome.status === 'skipped'
+          ? 'Skipped: existing content is not managed by skills-npm'
+          : undefined,
     })
   }
 
@@ -126,11 +159,18 @@ export async function symlinkSkills(skills: NpmSkill[], options: SymlinkOptions 
   return allResults
 }
 
+/**
+ * Remove symlinks that point into node_modules skill directories but are no
+ * longer part of the resolved skill set. Only managed symlinks are ever
+ * removed; real directories and foreign links are never touched. Legacy v1
+ * `npm-*` links also target node_modules, so migration falls out of the same
+ * rule.
+ */
 export async function cleanupStaleSkills(skills: NpmSkill[], options: SymlinkOptions = {}): Promise<CleanupResult[]> {
   const cwd = options.cwd || searchForWorkspaceRoot(process.cwd())
   const results: CleanupResult[] = []
 
-  // Build set of valid target names from discovered skills
+  // Build set of valid target names from resolved skills
   const validTargetNames = new Set(skills.map(s => s.targetName))
 
   // Determine which agents to check
@@ -157,11 +197,26 @@ export async function cleanupStaleSkills(skills: NpmSkill[], options: SymlinkOpt
       continue
     }
 
-    // Find npm-* entries that are not in the valid set
-    const staleEntries = entries.filter(entry => entry.startsWith('npm-') && !validTargetNames.has(entry))
+    for (const entry of entries) {
+      if (validTargetNames.has(entry))
+        continue
 
-    for (const entry of staleEntries) {
       const entryPath = join(agentSkillsDir, entry)
+
+      let isStale = false
+      try {
+        const stats = await lstat(entryPath)
+        if (stats.isSymbolicLink()) {
+          const target = await readlink(entryPath)
+          isStale = isManagedTarget(resolve(agentSkillsDir, target))
+        }
+      }
+      catch {
+        // Unreadable entry, leave it alone
+      }
+
+      if (!isStale)
+        continue
 
       if (options.dryRun) {
         results.push({
@@ -174,7 +229,7 @@ export async function cleanupStaleSkills(skills: NpmSkill[], options: SymlinkOpt
       }
 
       try {
-        await rm(entryPath, { recursive: true, force: true })
+        await rm(entryPath)
         results.push({
           agent: agentType,
           targetName: entry,

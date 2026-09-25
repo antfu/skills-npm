@@ -93,7 +93,7 @@ export async function wirePrepare(
 
 /**
  * Bootstrap skills-npm in a project by wiring the `prepare` script. The caller
- * runs the sync afterwards, which symlinks skills and updates .gitignore.
+ * runs the sync afterwards, which symlinks skills and writes the lock file.
  */
 export async function setupProject(options: ResolvedOptions): Promise<SetupResult> {
   const cwd = options.cwd || searchForWorkspaceRoot(process.cwd())

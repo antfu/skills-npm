@@ -2,13 +2,13 @@ import type { NpmSkill, PackageManagerLockfileInfo, ScanOptions, ScanResult, Ski
 import { readdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import process from 'node:process'
-import { getPackageManagerLockFileHash, isCacheUpToDate, readCache, writeCache } from './cache'
+import { CACHE_VERSION, getPackageManagerLockFileHash, isCacheUpToDate, readCache, writeCache } from './cache'
 import {
-  createTargetName,
   getPackageDeps,
   getPackageVersion,
   hasValidSkillMd,
   isDirectoryOrSymlink,
+  sanitizeSkillName,
   searchForPackagesRoot,
   searchForWorkspaceRoot,
 } from './utils'
@@ -83,6 +83,7 @@ export async function scanNodeModulesRecursively(options: ScanOptions): Promise<
 
 export async function saveCache(cwd: string, result: ScanResult, lockFileInfo: PackageManagerLockfileInfo): Promise<void> {
   await writeCache(cwd, {
+    version: CACHE_VERSION,
     lockfile: lockFileInfo,
     skills: result.skills,
     skillsInvalid: result.skillsInvalid,
@@ -184,7 +185,7 @@ export async function scanPackageForSkills(nodeModulesPath: string, packageName:
           packageVersion,
           skillName: entry.name,
           skillPath,
-          targetName: createTargetName(packageName, entry.name),
+          targetName: sanitizeSkillName(skillInfo.name!),
           name: skillInfo.name!,
           description: skillInfo.description!,
         })

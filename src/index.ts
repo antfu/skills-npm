@@ -1,7 +1,8 @@
 import type { CommandOptions } from './types'
 
 export * from './agents'
-export * from './gitignore'
+export * from './lock'
+export * from './resolve'
 export * from './scan'
 export * from './symlink'
 export type * from './types'

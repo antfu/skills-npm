@@ -1,14 +1,15 @@
-const LEADING_SCOPE_REGEX = /^@/
-const PACKAGE_SEPARATOR_REGEX = /\//g
-
-export function sanitizePackageName(packageName: string): string {
-  return packageName
-    .replace(LEADING_SCOPE_REGEX, '')
-    .replace(PACKAGE_SEPARATOR_REGEX, '-')
+/**
+ * Sanitize a skill's frontmatter `name` into its install/link name.
+ *
+ * Mirrors `sanitizeName` from vercel-labs/skills (vendor/skills/src/installer.ts)
+ * byte-for-byte so conflict checks against `skills-lock.json` compare the exact
+ * names the skills CLI would use.
+ */
+export function sanitizeSkillName(name: string): string {
+  const sanitized = name
     .toLowerCase()
-}
+    .replace(/[^a-z0-9._]+/g, '-')
+    .replace(/^[.\-]+|[.\-]+$/g, '')
 
-export function createTargetName(packageName: string, skillName: string): string {
-  const sanitizedPackage = sanitizePackageName(packageName)
-  return `npm-${sanitizedPackage}-${skillName}`
+  return sanitized.substring(0, 255) || 'unnamed-skill'
 }

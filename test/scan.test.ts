@@ -16,6 +16,8 @@ describe('scanCurrentNodeModules - source option', () => {
     const skillA = result.skills.find(s => s.packageName === 'test-pkg-a')
     expect(skillA?.skillName).toBe('test-skill')
     expect(skillA?.name).toBe('Test Skill A')
+    // Link name derives from the sanitized frontmatter name, not the folder
+    expect(skillA?.targetName).toBe('test-skill-a')
 
     const skillB = result.skills.find(s => s.packageName === '@test-scope/test-pkg-b')
     expect(skillB?.skillName).toBe('scoped-skill')

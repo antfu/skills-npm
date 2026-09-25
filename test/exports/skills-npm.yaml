@@ -1,7 +1,7 @@
 .:
   agents: object
   cleanupStaleSkills: function
-  createTargetName: function
+  createSkillsLock: function
   defineConfig: function
   detectAgentsByCommand: function
   detectInstalledAgents: function
@@ -12,12 +12,14 @@
   getPackageVersion: function
   getPnpmWorkspacePackages: function
   getWorkspacePackages: function
-  gitignoreExists: function
-  hasGitignorePattern: function
   hasValidSkillMd: function
   isDirectoryOrSymlink: function
+  isManagedTarget: function
   processSkills: function
-  sanitizePackageName: function
+  readSkillsLock: function
+  readVercelLockNames: function
+  resolveConflicts: function
+  sanitizeSkillName: function
   saveCache: function
   scanCurrentNodeModules: function
   scanNodeModules: function
@@ -26,7 +28,10 @@
   searchForPackageRoot: function
   searchForPackagesRoot: function
   searchForWorkspaceRoot: function
+  SKILLS_NPM_LOCK_FILE: string
+  SKILLS_NPM_LOCK_VERSION: number
   symlinkSkill: function
   symlinkSkills: function
-  updateGitignore: function
+  VERCEL_LOCK_FILE: string
+  writeSkillsLock: function
 ./cli: {}

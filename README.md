@@ -30,7 +30,7 @@ npm i -D skills-npm
 npx skills-npm setup
 ```
 
-`skills-npm setup` wires the tool into your `package.json` `prepare` script, adds the ignore pattern to your `.gitignore`, and runs the first sync. After that, skills are re-symlinked for your agent automatically whenever you install dependencies.
+`skills-npm setup` wires the tool into your `package.json` `prepare` script and runs the first sync. After that, skills are re-symlinked for your agent automatically whenever you install dependencies.
 
 `setup` merges into any existing `prepare` script (it appends with `&&` and is a no-op if already wired), resulting in:
 
@@ -43,14 +43,40 @@ npx skills-npm setup
 }
 ```
 
-`skills-npm` symlinks the skills from `node_modules` to `skills/npm-<package-name>-<skill-name>` for your agent, and `setup` adds the following to your `.gitignore`:
-
-```
-**/skills/npm-*
-```
+`skills-npm` symlinks each skill from `node_modules` into your agent's skills directory under the skill's own name (the `SKILL.md` frontmatter `name`, sanitized the same way the [`skills`](https://github.com/vercel-labs/skills) CLI sanitizes install names). The symlinks are relative and point into `node_modules`, so you can commit them: they are restored on every fresh clone as soon as `npm install` runs. No `.gitignore` changes are made.
 
 > [!NOTE]
 > Keep `skills-npm` as a `devDependency`. The `prepare` script runs on `install` (and before `publish`/`pack`), but never for people who install your published package, so it is safe to commit.
+
+## Lock file
+
+Each sync writes `skills-npm-lock.json` in your project root: a committed manifest of the skills skills-npm manages, keyed by skill name:
+
+```json
+{
+  "version": 1,
+  "skills": {
+    "presenter-mode": { "package": "@slidev/cli", "skillFolder": "presenter-mode" }
+  }
+}
+```
+
+It records *what* is installed, not *where*; agent directories are derived per machine, mirroring how the `skills` CLI keeps agent selection out of its committed lock. Skill versions are already pinned by your package manager's lock file.
+
+## Conflicts
+
+When the same skill name comes from more than one place, skills-npm applies this priority ladder:
+
+1. **Explicit installs win** - a name listed in the `skills` CLI's `skills-lock.json` is never touched, even when the skill is missing on disk.
+2. **Existing content wins** - a real directory or a symlink not pointing into `node_modules` is never replaced.
+3. **Direct beats transitive** - a skill from a direct dependency beats the same name from a transitive one.
+4. **Ties are skipped** - if two direct (or only transitive) dependencies collide, all contenders are skipped with a warning; resolve with `include`/`exclude`.
+
+Cleanup only ever removes symlinks that point into `node_modules` skill directories, so nothing else in your agent directories is at risk.
+
+## Migrating from v1
+
+v1 created `npm-<package>-<skill>` links and gitignored them. On the first v2 sync, stale `npm-*` links are removed automatically and re-created under the new names. The old `**/skills/npm-*` block in `.gitignore` no longer matches anything; skills-npm won't edit your `.gitignore`, so remove it whenever convenient (a hint is printed while it remains). If you want the links shared with your team, commit them along with `skills-npm-lock.json`.
 
 ## Configuration
 
@@ -67,8 +93,6 @@ export default defineConfig({
   agents: ['cursor', 'windsurf'],
   // Scan recursively for monorepo packages (default: false)
   recursive: false,
-  // Whether to update .gitignore (default: true)
-  gitignore: true,
   // Skip confirmation prompts (default: false)
   yes: false,
   // Dry run mode (default: false)
@@ -98,7 +122,7 @@ export default defineConfig({
 })
 ```
 
-`include` and `exclude` support package wildcard patterns such as `@some/*`. These filters only apply to packages that were already discovered from `node_modules` or `package.json`.
+`include` and `exclude` string patterns match either a package name (`@some/*`) or a sanitized skill name (`presenter-mode`). These filters only apply to packages that were already discovered from `node_modules` or `package.json`.
 
 ### Options
 
@@ -108,7 +132,6 @@ export default defineConfig({
 | `source` | `'node_modules' \| 'package.json'` | `'package.json'` | Source to discover skills from |
 | `agents` | `string \| string[]` | All detected | Target agents to install to |
 | `recursive` | `boolean` | `false` | Scan recursively for monorepo packages |
-| `gitignore` | `boolean` | `true` | Whether to update .gitignore |
 | `yes` | `boolean` | `false` | Skip confirmation prompts |
 | `dryRun` | `boolean` | `false` | Show what would be done without making changes |
 | `include` | `(string \| { package: string, skills: string[] })[]` | `undefined` | Packages or skills to include. Supports package wildcard patterns like `@some/*` |
@@ -130,8 +153,7 @@ Options:
   --yes                   Skip confirmation prompts
   --dry-run               Show what would be done without making changes
   --force                 Force full reload, ignore cache
-  --no-cleanup            Keep stale npm-* skills in agent directories
-  --no-gitignore          Do not update .gitignore
+  --no-cleanup            Keep stale skills-npm symlinks in agent directories
   -h, --help              Display help
   -v, --version           Display version
 ```

@@ -60,13 +60,13 @@ describe('hasValidSkillMd', () => {
 })
 
 const mockSkills: NpmSkill[] = [
-  { packageName: 'pkg-a', skillName: 'skill1', skillPath: '/a/skill1', targetName: 'npm-pkg-a-skill1', name: 'Skill 1', description: 'Desc 1' },
-  { packageName: 'pkg-a', skillName: 'skill2', skillPath: '/a/skill2', targetName: 'npm-pkg-a-skill2', name: 'Skill 2', description: 'Desc 2' },
-  { packageName: 'pkg-b', skillName: 'skill3', skillPath: '/b/skill3', targetName: 'npm-pkg-b-skill3', name: 'Skill 3', description: 'Desc 3' },
-  { packageName: '@some/foo', skillName: 'integration', skillPath: '/some/foo/integration', targetName: 'npm-some-foo-integration', name: 'Foo Integration', description: 'Desc 4' },
-  { packageName: '@some/foo', skillName: 'guide', skillPath: '/some/foo/guide', targetName: 'npm-some-foo-guide', name: 'Foo Guide', description: 'Desc 5' },
-  { packageName: '@some/bar', skillName: 'integration', skillPath: '/some/bar/integration', targetName: 'npm-some-bar-integration', name: 'Bar Integration', description: 'Desc 6' },
-  { packageName: 'pkg-c', skillName: 'skill4', skillPath: '/c/skill4', targetName: 'npm-pkg-c-skill4', name: 'Skill 4', description: 'Desc 4' },
+  { packageName: 'pkg-a', skillName: 'skill1', skillPath: '/a/skill1', targetName: 'skill-1', name: 'Skill 1', description: 'Desc 1' },
+  { packageName: 'pkg-a', skillName: 'skill2', skillPath: '/a/skill2', targetName: 'skill-2', name: 'Skill 2', description: 'Desc 2' },
+  { packageName: 'pkg-b', skillName: 'skill3', skillPath: '/b/skill3', targetName: 'skill-3', name: 'Skill 3', description: 'Desc 3' },
+  { packageName: '@some/foo', skillName: 'integration', skillPath: '/some/foo/integration', targetName: 'foo-integration', name: 'Foo Integration', description: 'Desc 4' },
+  { packageName: '@some/foo', skillName: 'guide', skillPath: '/some/foo/guide', targetName: 'foo-guide', name: 'Foo Guide', description: 'Desc 5' },
+  { packageName: '@some/bar', skillName: 'integration', skillPath: '/some/bar/integration', targetName: 'bar-integration', name: 'Bar Integration', description: 'Desc 6' },
+  { packageName: 'pkg-c', skillName: 'skill4', skillPath: '/c/skill4', targetName: 'skill-4', name: 'Skill 4', description: 'Desc 4' },
 ]
 
 describe('filterSkills', () => {
@@ -103,6 +103,18 @@ describe('filterSkills', () => {
     expect(result).toHaveLength(2)
     expect(result.every(s => s.skillName === 'integration')).toBe(true)
     expect(result.every(s => s.packageName.startsWith('@some/'))).toBe(true)
+  })
+
+  it('filters by sanitized skill name (string)', () => {
+    const result = filterSkills(mockSkills, ['foo-integration'], true)
+    expect(result).toHaveLength(1)
+    expect(result[0].packageName).toBe('@some/foo')
+  })
+
+  it('filters by sanitized skill name in the object form', () => {
+    const result = filterSkills(mockSkills, [{ package: '@some/*', skills: ['foo-guide'] }], true)
+    expect(result).toHaveLength(1)
+    expect(result[0].skillName).toBe('guide')
   })
 
   it('excludes matching skills when shouldMatch is false', () => {

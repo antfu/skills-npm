@@ -11,7 +11,6 @@ export const isWindows = platform() === 'win32'
 export const DEFAULT_OPTIONS: CommandOptions = {
   source: 'node_modules',
   recursive: false,
-  gitignore: true,
   yes: false,
   dryRun: false,
   exclude: [],
@@ -38,9 +37,12 @@ export const GRAYS = [
 ]
 export const RESET = '\x1B[0m'
 
-export const GITIGNORE_PATTERN = '**/skills/npm-*'
-export const LEGACY_GITIGNORE_PATTERN = 'skills/npm-*'
-export const GITIGNORE_COMMENT = '# Agent skills from npm packages (managed by skills-npm)'
+/**
+ * Gitignore patterns written by skills-npm v1. v2 commits the symlinks instead
+ * and never touches .gitignore; these are only used to hint that a leftover
+ * v1 block is inert and can be removed.
+ */
+export const LEGACY_GITIGNORE_PATTERNS = ['**/skills/npm-*', 'skills/npm-*']
 
 /**
  * Lock files for different package managers.
