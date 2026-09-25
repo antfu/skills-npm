@@ -36,6 +36,9 @@
   "files": [
     "dist"
   ],
+  "engines": {
+    "node": ">=22.20.0"
+  },
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown --watch",
@@ -51,6 +54,7 @@
     "@clack/prompts": "catalog:prod",
     "cac": "catalog:prod",
     "picocolors": "catalog:prod",
+    "skills": "catalog:prod",
     "tinyglobby": "catalog:prod",
     "unconfig": "catalog:prod",
     "xdg-basedir": "catalog:prod",

@@ -1,8 +1,9 @@
 /* eslint-disable no-console */
-import type { CleanupResult, NpmSkill, ResolvedOptions, SetupResult, SkillInvalidInfo, SkippedSkill, SymlinkResult } from './types'
+import type { AgentType, CleanupResult, NpmSkill, RemoteInstall, ResolvedOptions, SetupResult, SkillInvalidInfo, SkippedRemote, SkippedSkill, SymlinkResult } from './types'
 import * as p from '@clack/prompts'
 import c from 'picocolors'
 import { GRAYS, isTTY, LOGO_LINES, RESET } from './constants'
+import { addArgs, removeArgs } from './remote'
 
 function formatStatus(success: boolean): string {
   return success ? c.green('✓') : c.red('✗')
@@ -109,11 +110,60 @@ export function printSkippedSkills(skipped: SkippedSkill[]): void {
   }
 }
 
-export function printOutro(totalCount: number, successCount: number, options: ResolvedOptions): void {
-  if (options.dryRun)
-    p.outro(c.yellow(`[Dry run] Would create ${totalCount} symlinks`))
+const SKIP_DETAILS: Record<SkippedRemote['reason'], (skipped: SkippedRemote) => string> = {
+  'vercel-lock': () => 'already in skills-lock.json but not installed by skills-npm',
+  'vendored': () => 'a skill shipped in an npm package has the same name',
+  'name-conflict': s => `name conflict with ${s.conflictsWith?.join(', ') || 'another package'}`,
+}
+
+export function printSkippedRemote(skipped: SkippedRemote[]): void {
+  if (skipped.length === 0)
+    return
+
+  const header = 'Skipped remote skills:'
+  if (isTTY)
+    p.log.warn(header)
   else
-    p.outro(c.green(`✓ Created ${successCount}/${totalCount} symlinks`))
+    console.warn(header)
+
+  for (const item of skipped) {
+    const detail = SKIP_DETAILS[item.reason](item)
+    if (isTTY) {
+      console.log(`  ${c.yellow('⊘')} ${c.bold(item.name)} ${c.dim(`from ${item.source} via ${item.package}`)}`)
+      console.log(`    ${c.dim(detail)}`)
+    }
+    else {
+      console.warn(`  - ${item.name} (${item.source} via ${item.package}): ${detail}`)
+    }
+  }
+}
+
+/**
+ * The exact `skills` CLI invocations about to run, so a dry run shows what a
+ * real run would spawn.
+ */
+export function printRemotePlan(installs: RemoteInstall[], stale: string[], agents: AgentType[], options: ResolvedOptions): void {
+  const header = options.dryRun ? 'Would run the skills CLI:' : 'Running the skills CLI:'
+  if (options.dryRun)
+    printDryRun(header)
+  else if (isTTY)
+    p.log.info(header)
+  else
+    console.log(header)
+
+  const commands = installs.map(install => addArgs(install, agents))
+  if (stale.length > 0)
+    commands.push(removeArgs(stale))
+  for (const args of commands)
+    console.log(`  ${formatArrow()} ${c.dim('skills')} ${args.join(' ')}`)
+}
+
+export function printOutro(totalCount: number, successCount: number, remoteCount: number, options: ResolvedOptions): void {
+  const remote = remoteCount > 0 ? `, ${remoteCount} remote skill${remoteCount !== 1 ? 's' : ''}` : ''
+  if (options.dryRun)
+    p.outro(c.yellow(`[Dry run] Would create ${totalCount} symlinks${remote}`))
+  else
+    p.outro(c.green(`✓ Created ${successCount}/${totalCount} symlinks${remote}`))
 }
 
 export function printCleanupResults(results: CleanupResult[], options: ResolvedOptions): void {

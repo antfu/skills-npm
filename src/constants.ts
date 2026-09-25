@@ -16,6 +16,7 @@ export const DEFAULT_OPTIONS: CommandOptions = {
   exclude: [],
   force: false,
   cleanup: true,
+  remote: true,
 }
 
 export const LOGO_LINES = [

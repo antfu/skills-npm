@@ -1,4 +1,4 @@
-import type { CommandOptions, ResolvedOptions } from './types'
+import type { AgentType, CommandOptions, ResolvedOptions } from './types'
 import process from 'node:process'
 import { toArray } from '@antfu/utils'
 import { createConfigLoader } from 'unconfig'
@@ -37,7 +37,7 @@ export async function resolveConfig(options: Partial<CommandOptions>): Promise<R
   const merged = { ...defaults, ...configOptions, ...options }
 
   merged.cwd = merged.cwd || searchForWorkspaceRoot(process.cwd())
-  merged.agents = toArray(merged.agents)
+  merged.agents = toArray(merged.agents).flatMap(agent => agent.split(',')) as AgentType[]
   if ((merged.agents as string[]).includes('*'))
     merged.agents = getAllAgentTypes()
 

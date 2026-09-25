@@ -54,7 +54,7 @@ describe('writeSkillsLock', () => {
 
     const lock = JSON.parse(await readFile(join(dir, SKILLS_NPM_LOCK_FILE), 'utf-8'))
     expect(lock).toEqual({
-      version: 1,
+      version: 2,
       skills: {
         alpha: { package: '@scope/pkg-a', skillFolder: 'alpha-folder' },
         zeta: { package: 'pkg-b', skillFolder: 'zeta' },
@@ -70,7 +70,7 @@ describe('writeSkillsLock', () => {
   })
 
   it('does not write in dry-run mode', async () => {
-    const changed = await writeSkillsLock(dir, [skill('pkg-a', 'alpha', 'alpha')], true)
+    const changed = await writeSkillsLock(dir, [skill('pkg-a', 'alpha', 'alpha')], [], true)
     expect(changed).toBe(true)
     await expect(readFile(join(dir, SKILLS_NPM_LOCK_FILE), 'utf-8')).rejects.toThrow()
   })
@@ -80,5 +80,23 @@ describe('createSkillsLock', () => {
   it('keys entries by target name', () => {
     const lock = createSkillsLock([skill('pkg-a', 'folder-name', 'display-name')])
     expect(lock.skills['display-name']).toEqual({ package: 'pkg-a', skillFolder: 'folder-name' })
+    expect(lock).not.toHaveProperty('remote')
+  })
+
+  it('records which pack requested an npm: skill', () => {
+    const lock = createSkillsLock([{ ...skill('@vueuse/skills', 'vueuse', 'vueuse'), via: '@acme/pack' }])
+    expect(lock.skills.vueuse).toEqual({ package: '@vueuse/skills', skillFolder: 'vueuse', via: '@acme/pack' })
+  })
+
+  it('records remote skills sorted by name with their requesting package', () => {
+    const lock = createSkillsLock([], [
+      { name: 'zeta', package: '.', source: 'owner/repo', ref: 'v1' },
+      { name: 'alpha', package: '@acme/pack', source: 'vercel-labs/agent-skills' },
+    ])
+    expect(Object.keys(lock.remote!)).toEqual(['alpha', 'zeta'])
+    expect(lock.remote).toEqual({
+      alpha: { package: '@acme/pack', source: 'vercel-labs/agent-skills' },
+      zeta: { package: '.', source: 'owner/repo', ref: 'v1' },
+    })
   })
 })

@@ -1,4 +1,5 @@
 .:
+  addArgs: function
   agents: object
   cleanupStaleSkills: function
   createSkillsLock: function
@@ -13,12 +14,22 @@
   getPnpmWorkspacePackages: function
   getWorkspacePackages: function
   hasValidSkillMd: function
+  installRemote: function
   isDirectoryOrSymlink: function
   isManagedTarget: function
+  isSelected: function
+  listInstalledPackages: function
+  parseSkillsFieldEntry: function
+  planRemote: function
   processSkills: function
+  readSkillsFieldRequests: function
   readSkillsLock: function
   readVercelLockNames: function
+  removeArgs: function
+  removeRemote: function
   resolveConflicts: function
+  resolveNpmRequests: function
+  runSkillsCli: function
   sanitizeSkillName: function
   saveCache: function
   scanCurrentNodeModules: function
