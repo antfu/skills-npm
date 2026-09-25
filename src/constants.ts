@@ -9,7 +9,7 @@ export const isCI = Boolean(process.env.CI)
 export const isWindows = platform() === 'win32'
 
 export const DEFAULT_OPTIONS: CommandOptions = {
-  source: 'node_modules',
+  source: 'package.json',
   recursive: false,
   yes: false,
   dryRun: false,
