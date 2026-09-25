@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "skills": {
+    "slidev": {
+      "package": "@slidev/cli",
+      "skillFolder": "slidev"
+    }
+  }
+}
