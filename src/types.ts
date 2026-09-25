@@ -63,6 +63,12 @@ export interface CommandOptions {
    * @default true
    */
   cleanup?: boolean
+  /**
+   * Fetch remote skills declared in `skills` fields via the `skills` CLI.
+   * Set to false for offline installs; `npm:` entries still resolve.
+   * @default true
+   */
+  remote?: boolean
 }
 
 export interface ResolvedOptions extends Omit<CommandOptions, 'agents'> {
@@ -99,7 +105,117 @@ export interface NpmSkill {
    * Parsed skill description from SKILL.md
    */
   description: string
+  /**
+   * Package whose `skills` field requested this skill via an `npm:` entry,
+   * when that request is the only reason the skill is installed
+   */
+  via?: string
 }
+
+/**
+ * One item of a package.json `skills` field (see SPEC.md)
+ */
+export type SkillsFieldEntry
+  = | string
+    | { source: string, skills?: string[], ref?: string }
+
+/**
+ * A `skills` field entry pointing at a git-hosted source, attributed to the
+ * package that declared it
+ */
+export interface RemoteRequest {
+  /**
+   * Declaring package name, or `.` for the root project
+   */
+  package: string
+  /**
+   * Source string without skill shorthand or ref fragment
+   */
+  source: string
+  ref?: string
+  /**
+   * Skill names to install; empty means every skill the source provides
+   */
+  skills: string[]
+}
+
+/**
+ * A `skills` field entry of the form `npm:<package>`
+ */
+export interface NpmRequest {
+  /**
+   * Declaring package name, or `.` for the root project
+   */
+  package: string
+  /**
+   * Absolute path of the declaring package, used as the resolution origin
+   */
+  packagePath: string
+  /**
+   * npm package whose `skills/` directory is requested
+   */
+  target: string
+  skills: string[]
+}
+
+export interface SkillsFieldRequests {
+  remote: RemoteRequest[]
+  npm: NpmRequest[]
+}
+
+/**
+ * A remote skill about to be installed, or already installed, as requested
+ * by a `skills` field
+ */
+export interface RemoteSkill {
+  name: string
+  package: string
+  source: string
+  ref?: string
+}
+
+/**
+ * One `skills add` invocation covering every request that shares a source
+ */
+export interface RemoteInstall {
+  source: string
+  ref?: string
+  /**
+   * Skill names passed as `--skill`; empty means every skill in the source
+   */
+  skills: string[]
+  requests: RemoteRequest[]
+}
+
+export type SkippedRemoteReason
+  = | 'vercel-lock' // name is in skills-lock.json but was not installed by skills-npm
+    | 'vendored' // a skill shipped in a package's skills/ directory has the same name
+    | 'name-conflict' // several packages request the same name from different sources
+
+export interface SkippedRemote {
+  name: string
+  package: string
+  source: string
+  reason: SkippedRemoteReason
+  conflictsWith?: string[]
+}
+
+export interface RemotePlan {
+  installs: RemoteInstall[]
+  /**
+   * Skills already installed from the requested source; nothing to fetch
+   */
+  installed: RemoteSkill[]
+  skipped: SkippedRemote[]
+}
+
+export interface SkillsCliResult {
+  exitCode: number
+  stdout: string
+  stderr: string
+}
+
+export type SkillsCliRunner = (args: string[], cwd: string) => Promise<SkillsCliResult>
 
 export interface ScanOptions {
   /**
@@ -122,6 +238,14 @@ export interface ScanOptions {
    * @default false
    */
   force?: boolean
+}
+
+export interface InstalledPackage {
+  name: string
+  /**
+   * Absolute path to the package directory inside node_modules
+   */
+  path: string
 }
 
 export interface SkillInvalidInfo {
@@ -201,15 +325,31 @@ export interface SkillsNpmLockEntry {
    * Skill directory name inside the package's skills/ folder
    */
   skillFolder: string
+  /**
+   * Package whose `skills` field requested it via `npm:`, when that is the
+   * only reason it is installed
+   */
+  via?: string
+}
+
+export interface SkillsNpmLockRemoteEntry {
+  /**
+   * Package whose `skills` field requested it (`.` for the root project)
+   */
+  package: string
+  source: string
+  ref?: string
 }
 
 /**
- * Committed manifest of skills managed by skills-npm (`skills-npm-lock.json`).
- * Descriptive output of the last sync, keyed by sanitized skill name.
+ * Committed manifest of skills managed by skills-npm (`skills-npm-lock.json`),
+ * keyed by sanitized skill name. `skills` are symlinked from node_modules;
+ * `remote` were fetched by the `skills` CLI on behalf of a `skills` field.
  */
 export interface SkillsNpmLock {
   version: number
   skills: Record<string, SkillsNpmLockEntry>
+  remote?: Record<string, SkillsNpmLockRemoteEntry>
 }
 
 export type SkipReason

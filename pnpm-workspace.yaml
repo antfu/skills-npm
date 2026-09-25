@@ -51,6 +51,7 @@ catalogs:
     '@clack/prompts': ^1.8.1
     cac: ^7.0.0
     picocolors: ^1.1.1
+    skills: ^1.7.0
     tinyglobby: ^0.2.17
     unconfig: ^7.5.0
     xdg-basedir: ^5.1.0

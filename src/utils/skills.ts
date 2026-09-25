@@ -50,7 +50,9 @@ function matchesPackagePattern(packageName: string, pattern: string): boolean {
   return getPatternRegex(pattern).test(packageName)
 }
 
-function matchesFilter(skill: NpmSkill, options: FilterItem[]): boolean {
+export type FilterSubject = Pick<NpmSkill, 'packageName' | 'skillName' | 'targetName'>
+
+function matchesFilter(skill: FilterSubject, options: FilterItem[]): boolean {
   for (const item of options) {
     if (typeof item === 'string') {
       // A string pattern matches the package name or the (sanitized) skill name
@@ -76,11 +78,11 @@ function matchesFilter(skill: NpmSkill, options: FilterItem[]): boolean {
 /**
  * Filter skills by include/exclude options
  */
-export function filterSkills(
-  skills: NpmSkill[],
+export function filterSkills<T extends FilterSubject>(
+  skills: T[],
   options: FilterItem[] | undefined,
   shouldMatch: boolean,
-): NpmSkill[] {
+): T[] {
   if (!options || options.length === 0)
     return skills
 
@@ -91,6 +93,13 @@ export function filterSkills(
 }
 
 /**
+ * Whether a skill passes the include and exclude filters
+ */
+export function isSelected(skill: FilterSubject, include: FilterItem[] = [], exclude: FilterItem[] = []): boolean {
+  return filterSkills(filterSkills([skill], include, true), exclude, false).length === 1
+}
+
+/**
  * Apply include and exclude filters to skills
  */
 export function processSkills(
@@ -98,11 +107,10 @@ export function processSkills(
   include: FilterItem[] = [],
   exclude: FilterItem[] = [],
 ): FilterResult {
-  const includedSkills = filterSkills(skills, include, true)
-  const excludedSkills = filterSkills(includedSkills, exclude, false)
+  const kept = skills.filter(skill => isSelected(skill, include, exclude))
 
   return {
-    skills: excludedSkills,
-    excludedCount: skills.length - excludedSkills.length,
+    skills: kept,
+    excludedCount: skills.length - kept.length,
   }
 }

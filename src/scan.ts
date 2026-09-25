@@ -1,4 +1,4 @@
-import type { NpmSkill, PackageManagerLockfileInfo, ScanOptions, ScanResult, SkillInvalidInfo } from './types'
+import type { InstalledPackage, NpmSkill, PackageManagerLockfileInfo, ScanOptions, ScanResult, SkillInvalidInfo } from './types'
 import { readdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import process from 'node:process'
@@ -91,44 +91,34 @@ export async function saveCache(cwd: string, result: ScanResult, lockFileInfo: P
   })
 }
 
-export async function scanCurrentNodeModules(cwd: string, source: ScanOptions['source'] = 'node_modules'): Promise<ScanResult> {
+/**
+ * Packages installed under `<cwd>/node_modules`: every hoisted one, or only
+ * the root package.json's dependencies when `source` is `package.json`.
+ */
+export async function listInstalledPackages(cwd: string, source: ScanOptions['source'] = 'node_modules'): Promise<InstalledPackage[]> {
   const nodeModulesPath = join(cwd, 'node_modules')
-  const allSkills: NpmSkill[] = []
-  const allInvalidSkills: SkillInvalidInfo[] = []
-  let packageCount = 0
-
   const packageNames = source === 'package.json' ? await getPackageDeps(cwd) : null
+  const packages: InstalledPackage[] = []
+
+  const add = (name: string): void => {
+    if (!packageNames || packageNames.includes(name))
+      packages.push({ name, path: join(nodeModulesPath, name) })
+  }
 
   try {
     const entries = await readdir(nodeModulesPath, { withFileTypes: true })
 
     for (const entry of entries) {
-      // Check for directory or symlink (pnpm uses symlinks)
-      if (!isDirectoryOrSymlink(entry))
+      // pnpm installs packages as symlinks
+      if (!isDirectoryOrSymlink(entry) || entry.name.startsWith('.'))
         continue
 
-      // Skip hidden directories and common non-package directories
-      if (entry.name.startsWith('.'))
-        continue
-
-      // Handle scoped packages (@org/package)
       if (entry.name.startsWith('@')) {
-        const scopePath = join(nodeModulesPath, entry.name)
         try {
-          const scopedEntries = await readdir(scopePath, { withFileTypes: true })
+          const scopedEntries = await readdir(join(nodeModulesPath, entry.name), { withFileTypes: true })
           for (const scopedEntry of scopedEntries) {
-            if (!isDirectoryOrSymlink(scopedEntry))
-              continue
-
-            const fullPackageName = `${entry.name}/${scopedEntry.name}`
-
-            if (packageNames && !packageNames.includes(fullPackageName))
-              continue
-
-            packageCount++
-            const { skills, skillsInvalid } = await scanPackageForSkills(nodeModulesPath, fullPackageName)
-            allSkills.push(...skills)
-            allInvalidSkills.push(...skillsInvalid)
+            if (isDirectoryOrSymlink(scopedEntry))
+              add(`${entry.name}/${scopedEntry.name}`)
           }
         }
         catch {
@@ -136,13 +126,7 @@ export async function scanCurrentNodeModules(cwd: string, source: ScanOptions['s
         }
       }
       else {
-        if (packageNames && !packageNames.includes(entry.name))
-          continue
-
-        packageCount++
-        const { skills, skillsInvalid } = await scanPackageForSkills(nodeModulesPath, entry.name)
-        allSkills.push(...skills)
-        allInvalidSkills.push(...skillsInvalid)
+        add(entry.name)
       }
     }
   }
@@ -150,18 +134,31 @@ export async function scanCurrentNodeModules(cwd: string, source: ScanOptions['s
     // The node_modules doesn't exist or isn't readable
   }
 
+  return packages
+}
+
+export async function scanCurrentNodeModules(cwd: string, source: ScanOptions['source'] = 'node_modules'): Promise<ScanResult> {
+  const allSkills: NpmSkill[] = []
+  const allInvalidSkills: SkillInvalidInfo[] = []
+
+  const packages = await listInstalledPackages(cwd, source)
+  for (const pkg of packages) {
+    const { skills, skillsInvalid } = await scanPackageForSkills(pkg.path, pkg.name)
+    allSkills.push(...skills)
+    allInvalidSkills.push(...skillsInvalid)
+  }
+
   return {
     skills: allSkills,
     skillsInvalid: allInvalidSkills,
-    packagesScanned: packageCount,
+    packagesScanned: packages.length,
     rootPaths: [cwd],
   }
 }
 
-export async function scanPackageForSkills(nodeModulesPath: string, packageName: string): Promise<{ skills: NpmSkill[], skillsInvalid: SkillInvalidInfo[] }> {
+export async function scanPackageForSkills(packagePath: string, packageName: string): Promise<{ skills: NpmSkill[], skillsInvalid: SkillInvalidInfo[] }> {
   const skills: NpmSkill[] = []
   const skillsInvalid: SkillInvalidInfo[] = []
-  const packagePath = join(nodeModulesPath, packageName)
   const skillsDir = join(packagePath, 'skills')
 
   try {

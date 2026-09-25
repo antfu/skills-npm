@@ -1,7 +1,9 @@
 import type { CommandOptions } from './types'
 
 export * from './agents'
+export * from './field'
 export * from './lock'
+export * from './remote'
 export * from './resolve'
 export * from './scan'
 export * from './symlink'

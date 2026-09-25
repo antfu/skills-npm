@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import type { CAC } from 'cac'
-import type { AgentType, CommandOptions, NpmSkill, ResolvedOptions } from './types'
+import type { AgentType, CommandOptions, NpmRequest, NpmSkill, RemoteInstall, RemoteRequest, RemoteSkill, ResolvedOptions } from './types'
+import type { FilterSubject } from './utils/skills'
 import { realpathSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -13,13 +14,15 @@ import { name, version } from '../package.json'
 import { agents, getAllAgentTypes, getDetectedAgents } from './agents'
 import { resolveConfig } from './config'
 import { isCI, isTTY, LEGACY_GITIGNORE_PATTERNS } from './constants'
-import { readVercelLockNames, SKILLS_NPM_LOCK_FILE, writeSkillsLock } from './lock'
-import { printCleanupResults, printDryRun, printInvalidSkills, printLogo, printOutro, printSetupResults, printSkills, printSkippedSkills, printSymlinkResults } from './printer'
+import { readSkillsFieldRequests, resolveNpmRequests } from './field'
+import { readSkillsLock, readVercelLockNames, SKILLS_NPM_LOCK_FILE, writeSkillsLock } from './lock'
+import { printCleanupResults, printDryRun, printInvalidSkills, printLogo, printOutro, printRemotePlan, printSetupResults, printSkills, printSkippedRemote, printSkippedSkills, printSymlinkResults } from './printer'
+import { installRemote, planRemote, removeRemote, runSkillsCli } from './remote'
 import { resolveConflicts } from './resolve'
 import { scanNodeModules } from './scan'
 import { setupProject } from './setup'
 import { cleanupStaleSkills, symlinkSkills } from './symlink'
-import { getPackageDeps, processSkills } from './utils/index'
+import { getPackageDeps, isSelected, processSkills, sanitizeSkillName } from './utils/index'
 
 const cli: CAC = cac(name)
 
@@ -46,6 +49,7 @@ try {
     .option('--dry-run', 'Show what would be done without making changes')
     .option('--force', 'Force full reload, ignore cache')
     .option('--cleanup', 'Clean up stale skills-npm symlinks from agent directories (enabled by default; use --no-cleanup to disable)')
+    .option('--remote', 'Fetch remote skills declared in "skills" fields (enabled by default; use --no-remote when offline)')
     .action(async (options: Partial<CommandOptions>) => {
       if (isTTY) {
         printLogo()
@@ -53,7 +57,7 @@ try {
       }
 
       const config = await resolveConfig(options)
-      await runSync(config)
+      await run(() => runSync(config))
     })
 
   cli
@@ -66,6 +70,7 @@ try {
     .option('--dry-run', 'Show what would be done without making changes')
     .option('--force', 'Force full reload, ignore cache')
     .option('--cleanup', 'Clean up stale skills-npm symlinks from agent directories (enabled by default; use --no-cleanup to disable)')
+    .option('--remote', 'Fetch remote skills declared in "skills" fields (enabled by default; use --no-remote when offline)')
     .action(async (options: Partial<CommandOptions>) => {
       if (isTTY) {
         printLogo()
@@ -73,9 +78,11 @@ try {
       }
 
       const config = await resolveConfig(options)
-      const result = await setupProject(config)
-      printSetupResults(result, config)
-      await runSync(config)
+      await run(async () => {
+        const result = await setupProject(config)
+        printSetupResults(result, config)
+        await runSync(config)
+      })
     })
 
   cli.help()
@@ -96,9 +103,33 @@ catch (error) {
   process.exit(1)
 }
 
-async function promptConfirm(skills: NpmSkill[], targetAgents: AgentType[]): Promise<void> {
+/**
+ * cac does not await async actions, so a rejection would surface as an
+ * unhandled rejection with a stack trace instead of a message.
+ */
+async function run(action: () => Promise<void>): Promise<void> {
+  try {
+    await action()
+  }
+  catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    if (isTTY)
+      p.log.error(message)
+    else
+      console.error(message)
+    process.exit(1)
+  }
+}
+
+async function promptConfirm(skills: NpmSkill[], installs: RemoteInstall[], targetAgents: AgentType[]): Promise<void> {
+  const parts = []
+  if (skills.length > 0)
+    parts.push(`create symlinks for ${c.yellow(skills.length)} skill${skills.length > 1 ? 's' : ''}`)
+  if (installs.length > 0)
+    parts.push(`fetch ${c.yellow(installs.length)} remote source${installs.length > 1 ? 's' : ''}`)
+  const summary = parts.join(' and ')
   const result = await p.confirm({
-    message: `Create symlinks for ${c.yellow(skills.length)} skill${skills.length > 1 ? 's' : ''} to ${c.yellow(targetAgents.length)} agent${targetAgents.length > 1 ? 's' : ''}?`,
+    message: `${summary[0].toUpperCase()}${summary.slice(1)} for ${c.yellow(targetAgents.length)} agent${targetAgents.length > 1 ? 's' : ''}?`,
   })
   if (p.isCancel(result) || !result) {
     p.outro(c.red('Operation cancelled'))
@@ -106,27 +137,62 @@ async function promptConfirm(skills: NpmSkill[], targetAgents: AgentType[]): Pro
   }
 }
 
-async function scanSkills(options: ResolvedOptions): Promise<NpmSkill[]> {
+/**
+ * Collect `skills` field entries from the same places the scan looked. `npm:`
+ * entries become vendored skills; git-hosted ones are returned for planning.
+ */
+async function collectFieldRequests(rootPaths: string[], scanned: NpmSkill[], options: ResolvedOptions): Promise<{ skills: NpmSkill[], remote: RemoteRequest[] }> {
+  const remote: RemoteRequest[] = []
+  const npm: NpmRequest[] = []
+  for (const dir of rootPaths) {
+    const requests = await readSkillsFieldRequests(dir, options.source!, dir === options.cwd ? '.' : undefined)
+    remote.push(...requests.remote)
+    npm.push(...requests.npm)
+  }
+  return { skills: await resolveNpmRequests(npm, scanned), remote }
+}
+
+/**
+ * Apply include/exclude to remote requests: by requesting package always, by
+ * skill name where the entry names skills.
+ */
+function filterRemoteRequests(requests: RemoteRequest[], options: ResolvedOptions): RemoteRequest[] {
+  return requests.flatMap((request) => {
+    const subject = (name = ''): FilterSubject => ({ packageName: request.package, skillName: name, targetName: name })
+    if (request.skills.length === 0)
+      return isSelected(subject(), options.include, options.exclude) ? [request] : []
+    const skills = request.skills.filter(name => isSelected(subject(name), options.include, options.exclude))
+    return skills.length > 0 ? [{ ...request, skills }] : []
+  })
+}
+
+async function scanSkills(options: ResolvedOptions): Promise<{ skills: NpmSkill[], remote: RemoteRequest[] }> {
   const spinner = isTTY ? p.spinner() : null
   spinner?.start('Scanning node_modules for skills...')
 
-  const { skills: scannedSkills, skillsInvalid, packagesScanned, fromCache } = await scanNodeModules({
+  const { skills: scannedSkills, skillsInvalid, packagesScanned, fromCache, rootPaths } = await scanNodeModules({
     cwd: options.cwd,
     source: options.source,
     recursive: options.recursive,
     force: options.force,
   })
+  const field = await collectFieldRequests(rootPaths, scannedSkills, options)
 
   const hasInvalidSkills = skillsInvalid.length > 0
   const invalidCount = skillsInvalid.length
 
   const { skills, excludedCount } = processSkills(
-    scannedSkills,
+    [...scannedSkills, ...field.skills],
     options.include,
     options.exclude,
   )
+  const remote = options.remote === false ? [] : filterRemoteRequests(field.remote, options)
 
-  if (skills.length === 0) {
+  // remote skills we installed earlier still need syncing (removal) even when
+  // nothing is requested anymore
+  const hasPreviousRemote = Object.keys((await readSkillsLock(options.cwd!))?.remote ?? {}).length > 0
+
+  if (skills.length === 0 && remote.length === 0 && !hasPreviousRemote) {
     let msg = `Scanned ${c.yellow(packagesScanned)} package${packagesScanned !== 1 ? 's' : ''}, no skills found`
     if (fromCache)
       msg += ' (from cache)'
@@ -149,6 +215,8 @@ async function scanSkills(options: ResolvedOptions): Promise<NpmSkill[]> {
   }
 
   let message = `Scanned ${packagesScanned} package${packagesScanned !== 1 ? 's' : ''}, found ${skills.length} skill${skills.length !== 1 ? 's' : ''}`
+  if (remote.length > 0)
+    message += ` and ${remote.length} remote request${remote.length !== 1 ? 's' : ''}`
   if (fromCache)
     message += ' (from cache)'
   if (excludedCount > 0)
@@ -160,7 +228,7 @@ async function scanSkills(options: ResolvedOptions): Promise<NpmSkill[]> {
   else
     console.log(message)
 
-  if (isTTY)
+  if (isTTY && skills.length > 0)
     p.log.info('Discovered skills:')
 
   printSkills(skills)
@@ -168,7 +236,7 @@ async function scanSkills(options: ResolvedOptions): Promise<NpmSkill[]> {
   if (hasInvalidSkills)
     printInvalidSkills(skillsInvalid)
 
-  return skills
+  return { skills, remote }
 }
 
 async function getTargetAgents(options: ResolvedOptions): Promise<AgentType[]> {
@@ -287,8 +355,8 @@ async function cleanupStale(skills: NpmSkill[], agents: AgentType[], options: Re
   return results.length
 }
 
-async function updateLock(skills: NpmSkill[], options: ResolvedOptions): Promise<void> {
-  const changed = await writeSkillsLock(options.cwd!, skills, options.dryRun)
+async function updateLock(skills: NpmSkill[], remote: RemoteSkill[], options: ResolvedOptions): Promise<void> {
+  const changed = await writeSkillsLock(options.cwd!, skills, remote, options.dryRun)
   if (!changed)
     return
 
@@ -327,31 +395,96 @@ async function hintLegacyGitignore(options: ResolvedOptions): Promise<void> {
     console.log(msg)
 }
 
+interface RemoteSync {
+  installs: RemoteInstall[]
+  installed: RemoteSkill[]
+  /**
+   * Names we installed last time that no honored package requests anymore
+   */
+  stale: string[]
+}
+
+function sourceKey(entry: { source: string, ref?: string }): string {
+  return entry.ref ? `${entry.source}#${entry.ref}` : entry.source
+}
+
+async function planRemoteSync(requests: RemoteRequest[], vendored: NpmSkill[], vercelLockNames: Set<string>, directDeps: Set<string>, options: ResolvedOptions): Promise<RemoteSync> {
+  const previous = (await readSkillsLock(options.cwd!))?.remote ?? {}
+  if (options.remote === false) {
+    // offline: keep what the lock already records, neither fetch nor remove
+    const installed = Object.entries(previous).map(([name, entry]) => ({ name, ...entry }))
+    return { installs: [], installed, stale: [] }
+  }
+
+  const plan = planRemote(requests, {
+    vercelLockNames,
+    previous,
+    vendoredNames: new Set(vendored.map(s => s.targetName)),
+    directDeps,
+    force: options.force,
+  })
+  printSkippedRemote(plan.skipped)
+
+  const requested = new Set([...plan.installed.map(s => s.name), ...plan.installs.flatMap(i => i.skills.map(sanitizeSkillName))])
+  const stale = Object.keys(previous).filter(name =>
+    !requested.has(name)
+    && vercelLockNames.has(name)
+    // a whole-repository fetch may still provide names we cannot know up front
+    && !plan.installs.some(i => i.skills.length === 0 && sourceKey(i) === sourceKey(previous[name])),
+  )
+
+  return { installs: plan.installs, installed: plan.installed, stale }
+}
+
+async function executeRemoteSync(sync: RemoteSync, agents: AgentType[], options: ResolvedOptions): Promise<RemoteSkill[]> {
+  const stale = options.cleanup === false ? [] : sync.stale
+  if (sync.installs.length === 0 && stale.length === 0)
+    return sync.installed
+
+  printRemotePlan(sync.installs, stale, agents, options)
+  if (options.dryRun)
+    return sync.installed
+
+  const spinner = isTTY ? p.spinner() : null
+  spinner?.start('Fetching remote skills...')
+  try {
+    const installed = await installRemote(sync.installs, agents, options.cwd!, runSkillsCli)
+    await removeRemote(stale, options.cwd!, runSkillsCli)
+    spinner?.stop(`Fetched ${installed.length} remote skill${installed.length !== 1 ? 's' : ''}`)
+    return [...sync.installed, ...installed]
+  }
+  catch (error) {
+    spinner?.error('Fetching remote skills failed')
+    throw error
+  }
+}
+
 async function runSync(config: ResolvedOptions): Promise<void> {
-  const skills = await scanSkills(config)
+  const { skills, remote: requests } = await scanSkills(config)
 
   const [vercelLockNames, directDeps] = await Promise.all([
     readVercelLockNames(config.cwd!),
-    getPackageDeps(config.cwd!),
+    getPackageDeps(config.cwd!).then(deps => new Set(deps)),
   ])
-  const { resolved, skipped } = resolveConflicts(skills, {
-    vercelLockNames,
-    directDeps: new Set(directDeps),
-  })
+  const { resolved, skipped } = resolveConflicts(skills, { vercelLockNames, directDeps })
   printSkippedSkills(skipped)
 
   const targetAgents = await getTargetAgents(config)
 
-  if (resolved.length > 0 && isTTY && !config.dryRun && !config.yes)
-    await promptConfirm(resolved, targetAgents)
+  const sync = await planRemoteSync(requests, resolved, vercelLockNames, directDeps, config)
+
+  if ((resolved.length > 0 || sync.installs.length > 0) && isTTY && !config.dryRun && !config.yes)
+    await promptConfirm(resolved, sync.installs, targetAgents)
 
   const [totalCount, successCount] = await createSymlinks(resolved, targetAgents, config)
 
   if (config.cleanup !== false)
     await cleanupStale(resolved, targetAgents, config)
 
-  await updateLock(resolved, config)
+  const remote = await executeRemoteSync(sync, targetAgents, config)
+
+  await updateLock(resolved, remote, config)
   await hintLegacyGitignore(config)
 
-  printOutro(totalCount, successCount, config)
+  printOutro(totalCount, successCount, remote.length, config)
 }

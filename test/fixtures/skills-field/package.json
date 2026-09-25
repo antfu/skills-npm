@@ -1,0 +1,12 @@
+{
+  "name": "test-skills-field",
+  "version": "1.0.0",
+  "private": true,
+  "skills": [
+    "owner/root-repo@root-skill"
+  ],
+  "dependencies": {
+    "@acme/pack": "^1.0.0",
+    "direct-tool": "^1.0.0"
+  }
+}
