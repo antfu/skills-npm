@@ -43,7 +43,7 @@ export async function getPackageManagerLockFileHash(cwd: string): Promise<Packag
   for (const file of LOCK_FILES.all) {
     try {
       // Binary files (bun.lockb) need Buffer reading, text files use UTF-8
-      const encoding = isBinaryLockFile(file) ? undefined : 'utf-8'
+      const encoding = isBinaryLockFile(file) ? null : 'utf-8'
       const content = await readFile(join(cwd, file), encoding)
       return {
         hash: createHash('md5').update(content).digest('hex'),
