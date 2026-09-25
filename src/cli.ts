@@ -2,6 +2,8 @@
 import type { CAC } from 'cac'
 import type { AgentType, CommandOptions, NpmSkill, ResolvedOptions } from './types'
 import { realpathSync } from 'node:fs'
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import * as p from '@clack/prompts'
@@ -10,13 +12,14 @@ import c from 'picocolors'
 import { name, version } from '../package.json'
 import { agents, getAllAgentTypes, getDetectedAgents } from './agents'
 import { resolveConfig } from './config'
-import { isCI, isTTY } from './constants'
-import { hasGitignorePattern, updateGitignore } from './gitignore'
-import { printCleanupResults, printDryRun, printInvalidSkills, printLogo, printOutro, printSetupResults, printSkills, printSymlinkResults } from './printer'
+import { isCI, isTTY, LEGACY_GITIGNORE_PATTERNS } from './constants'
+import { readVercelLockNames, SKILLS_NPM_LOCK_FILE, writeSkillsLock } from './lock'
+import { printCleanupResults, printDryRun, printInvalidSkills, printLogo, printOutro, printSetupResults, printSkills, printSkippedSkills, printSymlinkResults } from './printer'
+import { resolveConflicts } from './resolve'
 import { scanNodeModules } from './scan'
 import { setupProject } from './setup'
 import { cleanupStaleSkills, symlinkSkills } from './symlink'
-import { processSkills } from './utils/index'
+import { getPackageDeps, processSkills } from './utils/index'
 
 const cli: CAC = cac(name)
 
@@ -39,11 +42,10 @@ try {
     .option('--agents, -a <agents>', 'Comma-separated list of agents to install to')
     .option('--source, -s <source>', 'Source used to discover skills', { default: 'package.json' })
     .option('--recursive, -r', 'Scan recursively for monorepo packages', { default: false })
-    .option('--gitignore', 'Skip updating .gitignore', { default: true })
     .option('--yes', 'Skip confirmation prompts', { default: false })
     .option('--dry-run', 'Show what would be done without making changes', { default: false })
     .option('--force', 'Force full reload, ignore cache', { default: false })
-    .option('--cleanup', 'Clean up stale npm-* skills from agent directories', { default: true })
+    .option('--cleanup', 'Clean up stale skills-npm symlinks from agent directories', { default: true })
     .action(async (options: Partial<CommandOptions>) => {
       if (isTTY) {
         printLogo()
@@ -60,11 +62,10 @@ try {
     .option('--agents, -a <agents>', 'Comma-separated list of agents to install to')
     .option('--source, -s <source>', 'Source used to discover skills', { default: 'package.json' })
     .option('--recursive, -r', 'Scan recursively for monorepo packages', { default: false })
-    .option('--gitignore', 'Skip updating .gitignore', { default: true })
     .option('--yes', 'Skip confirmation prompts', { default: false })
     .option('--dry-run', 'Show what would be done without making changes', { default: false })
     .option('--force', 'Force full reload, ignore cache', { default: false })
-    .option('--cleanup', 'Clean up stale npm-* skills from agent directories', { default: true })
+    .option('--cleanup', 'Clean up stale skills-npm symlinks from agent directories', { default: true })
     .action(async (options: Partial<CommandOptions>) => {
       if (isTTY) {
         printLogo()
@@ -251,7 +252,7 @@ async function createSymlinks(skills: NpmSkill[], agents: AgentType[], options: 
 
   printSymlinkResults(results, options)
 
-  const successCount = results.filter(r => r.success).length
+  const successCount = results.filter(r => r.status === 'created').length
   const totalCount = results.length
 
   return [totalCount, successCount]
@@ -286,43 +287,71 @@ async function cleanupStale(skills: NpmSkill[], agents: AgentType[], options: Re
   return results.length
 }
 
-async function writeGitignore(options: ResolvedOptions): Promise<void> {
-  const hasPattern = await hasGitignorePattern(options.cwd)
-
-  if (hasPattern)
+async function updateLock(skills: NpmSkill[], options: ResolvedOptions): Promise<void> {
+  const changed = await writeSkillsLock(options.cwd!, skills, options.dryRun)
+  if (!changed)
     return
 
-  if (options.dryRun) {
-    printDryRun('Would update .gitignore with: skills/npm-*')
+  const msg = options.dryRun
+    ? `Would update ${SKILLS_NPM_LOCK_FILE}`
+    : `Updated ${SKILLS_NPM_LOCK_FILE}`
+  if (options.dryRun)
+    printDryRun(msg)
+  else if (isTTY)
+    p.log.success(msg)
+  else
+    console.log(msg)
+}
+
+/**
+ * v1 gitignored its `npm-*` links; v2 names carry no prefix, so a leftover v1
+ * block no longer matches anything. Hint at it, but never edit .gitignore.
+ */
+async function hintLegacyGitignore(options: ResolvedOptions): Promise<void> {
+  let content: string
+  try {
+    content = await readFile(join(options.cwd!, '.gitignore'), 'utf-8')
+  }
+  catch {
     return
   }
 
-  const { updated, created } = await updateGitignore(options.cwd)
-  if (updated) {
-    const msg = created
-      ? 'Created .gitignore with skills/npm-* pattern'
-      : 'Updated .gitignore with skills/npm-* pattern'
-    if (isTTY)
-      p.log.success(msg)
-    else
-      console.log(msg)
-  }
+  const lines = content.split('\n').map(line => line.trim())
+  if (!LEGACY_GITIGNORE_PATTERNS.some(pattern => lines.includes(pattern)))
+    return
+
+  const msg = 'Your .gitignore still has the skills-npm v1 "skills/npm-*" pattern; it no longer matches anything and can be removed'
+  if (isTTY)
+    p.log.info(msg)
+  else
+    console.log(msg)
 }
 
 async function runSync(config: ResolvedOptions): Promise<void> {
   const skills = await scanSkills(config)
+
+  const [vercelLockNames, directDeps] = await Promise.all([
+    readVercelLockNames(config.cwd!),
+    getPackageDeps(config.cwd!),
+  ])
+  const { resolved, skipped } = resolveConflicts(skills, {
+    vercelLockNames,
+    directDeps: new Set(directDeps),
+  })
+  printSkippedSkills(skipped)
+
   const targetAgents = await getTargetAgents(config)
 
-  if (isTTY && !config.dryRun && !config.yes)
-    await promptConfirm(skills, targetAgents)
+  if (resolved.length > 0 && isTTY && !config.dryRun && !config.yes)
+    await promptConfirm(resolved, targetAgents)
 
-  const [totalCount, successCount] = await createSymlinks(skills, targetAgents, config)
+  const [totalCount, successCount] = await createSymlinks(resolved, targetAgents, config)
 
   if (config.cleanup !== false)
-    await cleanupStale(skills, targetAgents, config)
+    await cleanupStale(resolved, targetAgents, config)
 
-  if (config.gitignore !== false)
-    await writeGitignore(config)
+  await updateLock(resolved, config)
+  await hintLegacyGitignore(config)
 
   printOutro(totalCount, successCount, config)
 }

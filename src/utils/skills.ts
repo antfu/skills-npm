@@ -53,13 +53,18 @@ function matchesPackagePattern(packageName: string, pattern: string): boolean {
 function matchesFilter(skill: NpmSkill, options: FilterItem[]): boolean {
   for (const item of options) {
     if (typeof item === 'string') {
-      if (matchesPackagePattern(skill.packageName, item))
+      // A string pattern matches the package name or the (sanitized) skill name
+      if (
+        matchesPackagePattern(skill.packageName, item)
+        || matchesPackagePattern(skill.targetName, item)
+      ) {
         return true
+      }
     }
     else {
       if (
         matchesPackagePattern(skill.packageName, item.package)
-        && item.skills.includes(skill.skillName)
+        && (item.skills.includes(skill.skillName) || item.skills.includes(skill.targetName))
       ) {
         return true
       }

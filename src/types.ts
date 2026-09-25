@@ -32,11 +32,6 @@ export interface CommandOptions {
    */
   recursive?: boolean
   /**
-   * Skip updating .gitignore
-   * @default true
-   */
-  gitignore?: boolean
-  /**
    * Skip confirmation prompts
    * @default false
    */
@@ -64,7 +59,7 @@ export interface CommandOptions {
    */
   force?: boolean
   /**
-   * Clean up stale npm-* skills from agent directories
+   * Clean up stale skills-npm symlinks from agent directories
    * @default true
    */
   cleanup?: boolean
@@ -92,7 +87,8 @@ export interface NpmSkill {
    */
   skillPath: string
   /**
-   * Target symlink name with npm- prefix (e.g., "npm-eslint-best-practices")
+   * Symlink name: the frontmatter `name` sanitized the same way the
+   * vercel-labs/skills CLI sanitizes install names (e.g., "presenter-mode")
    */
   targetName: string
   /**
@@ -187,9 +183,46 @@ export interface PackageManagerLockfileInfo {
 
 export interface SkillsNpmCache extends ScanResultBase {
   /**
+   * Cache format version; caches from other versions are discarded
+   */
+  version: number
+  /**
    * Package manager lockfile information
    */
   lockfile: PackageManagerLockfileInfo
+}
+
+export interface SkillsNpmLockEntry {
+  /**
+   * NPM package the skill ships in
+   */
+  package: string
+  /**
+   * Skill directory name inside the package's skills/ folder
+   */
+  skillFolder: string
+}
+
+/**
+ * Committed manifest of skills managed by skills-npm (`skills-npm-lock.json`).
+ * Descriptive output of the last sync, keyed by sanitized skill name.
+ */
+export interface SkillsNpmLock {
+  version: number
+  skills: Record<string, SkillsNpmLockEntry>
+}
+
+export type SkipReason
+  = | 'vercel-lock' // name is declared in skills-lock.json (explicit install wins)
+    | 'name-conflict' // same name provided by multiple packages with no clear winner
+
+export interface SkippedSkill {
+  skill: NpmSkill
+  reason: SkipReason
+  /**
+   * For name conflicts: the other packages providing the same name
+   */
+  conflictsWith?: string[]
 }
 
 export interface SymlinkOptions {
@@ -224,11 +257,12 @@ export interface SymlinkResult {
    */
   targetPath: string
   /**
-   * Success flag
+   * Outcome: `skipped` means the destination holds content skills-npm does not
+   * manage (a real directory, or a symlink not pointing into node_modules)
    */
-  success: boolean
+  status: 'created' | 'skipped' | 'failed'
   /**
-   * Error message
+   * Error or skip message
    */
   error?: string
 }
@@ -239,7 +273,7 @@ export interface CleanupResult {
    */
   agent: string
   /**
-   * Target name of the stale skill (e.g., "npm-foo-bar")
+   * Target name of the stale skill
    */
   targetName: string
   /**

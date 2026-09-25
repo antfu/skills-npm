@@ -7,13 +7,22 @@ import { LOCK_FILES } from './constants'
 
 const LOCK_FILE_PATH = 'node_modules/.skills-npm/cache.json'
 
+/**
+ * Bumped when the cached skill shape changes (v2 renamed targetName from the
+ * `npm-*` scheme to sanitized skill names), so stale v1 caches are discarded.
+ */
+export const CACHE_VERSION = 2
+
 export async function readCache(cwd: string): Promise<SkillsNpmCache | null> {
   try {
     const path = join(cwd, LOCK_FILE_PATH)
     if (!existsSync(path))
       return null
     const content = await readFile(path, 'utf-8')
-    return JSON.parse(content)
+    const parsed = JSON.parse(content)
+    if (parsed?.version !== CACHE_VERSION)
+      return null
+    return parsed
   }
   catch {
     return null

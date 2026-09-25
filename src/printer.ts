@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import type { CleanupResult, NpmSkill, ResolvedOptions, SetupResult, SkillInvalidInfo, SymlinkResult } from './types'
+import type { CleanupResult, NpmSkill, ResolvedOptions, SetupResult, SkillInvalidInfo, SkippedSkill, SymlinkResult } from './types'
 import * as p from '@clack/prompts'
 import c from 'picocolors'
 import { GRAYS, isTTY, LOGO_LINES, RESET } from './constants'
@@ -66,7 +66,9 @@ export function printSymlinkResults(results: SymlinkResult[], options: ResolvedO
 
   for (const [agent, agentResults] of agentsResult) {
     const skills = agentResults.map((result) => {
-      const status = formatStatus(result.success)
+      const status = result.status === 'skipped'
+        ? c.yellow('⊘')
+        : formatStatus(result.status === 'created')
       const prefix = options.dryRun ? formatArrow() : status
       return `${prefix} ${result.skill.targetName}`
     }).join(', ')
@@ -75,9 +77,34 @@ export function printSymlinkResults(results: SymlinkResult[], options: ResolvedO
     if (!isTTY)
       return
 
-    const errors = agentResults.filter(r => !r.success && r.error)
+    const errors = agentResults.filter(r => r.status !== 'created' && r.error)
     for (const result of errors) {
-      console.log(`    ${c.red(result.error)}`)
+      const color = result.status === 'skipped' ? c.yellow : c.red
+      console.log(`    ${color(result.error)}`)
+    }
+  }
+}
+
+export function printSkippedSkills(skipped: SkippedSkill[]): void {
+  if (skipped.length === 0)
+    return
+
+  const header = 'Skipped skills:'
+  if (isTTY)
+    p.log.warn(header)
+  else
+    console.warn(header)
+
+  for (const { skill, reason, conflictsWith } of skipped) {
+    const detail = reason === 'vercel-lock'
+      ? 'explicitly installed via skills-lock.json'
+      : `name conflict with ${conflictsWith?.join(', ') || 'another package'}`
+    if (isTTY) {
+      console.log(`  ${c.yellow('⊘')} ${c.bold(skill.targetName)} ${c.dim(`from ${skill.packageName}`)}`)
+      console.log(`    ${c.dim(detail)}`)
+    }
+    else {
+      console.warn(`  - ${skill.targetName} (${skill.packageName}): ${detail}`)
     }
   }
 }
