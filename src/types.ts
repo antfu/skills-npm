@@ -23,7 +23,7 @@ export interface CommandOptions {
   agents?: AgentType | AgentType[]
   /**
    * Source to discover skills from
-   * @default 'node_modules'
+   * @default 'package.json'
    */
   source?: 'node_modules' | 'package.json'
   /**
