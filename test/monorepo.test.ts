@@ -19,21 +19,25 @@ describe.each(monorepoTypes)('$name', ({ path }) => {
       recursive: true,
     })
 
-    expect(result.skills).toHaveLength(2)
+    expect(result.rootPaths[0]).toBe(monorepoPath)
+    expect(result.skills.map(s => `${s.packageName}/${s.skillName}`).sort()).toEqual([
+      '@test-scope/test-pkg-b/another-skill',
+      'test-pkg-a/second-skill',
+      'test-pkg-a/test-skill',
+      'test-root-pkg/root-skill',
+    ])
 
-    const skillA = result.skills.find(s => s.packageName === 'test-pkg-a')
-    expect(skillA).toBeDefined()
-    expect(skillA?.skillName).toBe('test-skill')
+    const skillA = result.skills.find(s => s.skillName === 'test-skill')
     expect(skillA?.name).toBe('Test Skill A')
     expect(skillA?.description).toBe('A test skill in pkg-a')
+    // test-pkg-a is installed under both pkg-a and pkg-b; the first root wins
+    expect(skillA?.skillPath).toContain(join('packages', 'pkg-a'))
 
     const skillB = result.skills.find(s => s.packageName === '@test-scope/test-pkg-b')
-    expect(skillB).toBeDefined()
-    expect(skillB?.skillName).toBe('another-skill')
     expect(skillB?.name).toBe('Another Skill B')
     expect(skillB?.description).toBe('Another test skill in pkg-b')
 
-    expect(result.packagesScanned).toBeGreaterThanOrEqual(2)
+    expect(result.packagesScanned).toBeGreaterThanOrEqual(4)
   })
 
   it('should only scan current node_modules when recursive is false', async () => {
@@ -42,7 +46,7 @@ describe.each(monorepoTypes)('$name', ({ path }) => {
       recursive: false,
     })
 
-    expect(result.skills).toHaveLength(0)
-    expect(result.packagesScanned).toBe(0)
+    expect(result.skills.map(s => s.packageName)).toEqual(['test-root-pkg'])
+    expect(result.packagesScanned).toBe(1)
   })
 })

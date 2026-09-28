@@ -57,7 +57,9 @@ export async function scanNodeModulesRecursively(options: ScanOptions): Promise<
     packagesScanned: 0,
   }
 
-  const rootPaths = await searchForPackagesRoot(cwd)
+  // The same package can be installed under several workspace node_modules;
+  // keep its first occurrence but never collapse distinct skills of one package.
+  const rootPaths = [...new Set([cwd, ...await searchForPackagesRoot(cwd)])]
   for (const dir of rootPaths) {
     const { skills, skillsInvalid, packagesScanned } = await scanCurrentNodeModules(
       dir,
@@ -65,13 +67,15 @@ export async function scanNodeModulesRecursively(options: ScanOptions): Promise<
     )
 
     skills.forEach((skill) => {
-      if (!scanResult.skills.has(skill.packageName))
-        scanResult.skills.set(skill.packageName, skill)
+      const key = `${skill.packageName}/${skill.targetName}`
+      if (!scanResult.skills.has(key))
+        scanResult.skills.set(key, skill)
     })
 
     skillsInvalid.forEach((invalidSkill) => {
-      if (!scanResult.invalidSkills.has(invalidSkill.packageName))
-        scanResult.invalidSkills.set(invalidSkill.packageName, invalidSkill)
+      const key = `${invalidSkill.packageName}/${invalidSkill.skillName}`
+      if (!scanResult.invalidSkills.has(key))
+        scanResult.invalidSkills.set(key, invalidSkill)
     })
 
     scanResult.packagesScanned += packagesScanned
