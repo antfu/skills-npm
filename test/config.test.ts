@@ -34,4 +34,15 @@ describe('resolveConfig', () => {
 
     expect(config.source).toBe('package.json')
   })
+
+  it('splits comma-separated CLI filters and keeps object entries intact', async () => {
+    const config = await resolveConfig({
+      cwd: fixturesDir,
+      include: ['@scope/*,pkg-a', { package: 'pkg-b', skills: ['one'] }],
+      exclude: 'pkg-c,pkg-d',
+    })
+
+    expect(config.include).toEqual(['@scope/*', 'pkg-a', { package: 'pkg-b', skills: ['one'] }])
+    expect(config.exclude).toEqual(['pkg-c', 'pkg-d'])
+  })
 })

@@ -43,16 +43,16 @@ export interface CommandOptions {
   dryRun?: boolean
   /**
    * Packages or skills to include (only these will be installed)
-   * Supports package wildcard patterns like "@some/*"
+   * Supports package wildcard patterns like "@some/*"; a string may be comma-separated
    * @default undefined (include all)
    */
-  include?: FilterItem[]
+  include?: FilterItem | FilterItem[]
   /**
    * Packages or skills to exclude from being installed
-   * Supports package wildcard patterns like "@some/*"
+   * Supports package wildcard patterns like "@some/*"; a string may be comma-separated
    * @default []
    */
-  exclude?: FilterItem[]
+  exclude?: FilterItem | FilterItem[]
   /**
    * Force full reload, ignore cache
    * @default false
@@ -71,8 +71,10 @@ export interface CommandOptions {
   remote?: boolean
 }
 
-export interface ResolvedOptions extends Omit<CommandOptions, 'agents'> {
+export interface ResolvedOptions extends Omit<CommandOptions, 'agents' | 'include' | 'exclude'> {
   agents: AgentType[]
+  include?: FilterItem[]
+  exclude: FilterItem[]
 }
 
 export interface NpmSkill {

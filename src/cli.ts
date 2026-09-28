@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import type { CAC } from 'cac'
+import type { CAC, Command } from 'cac'
 import type { AgentType, CommandOptions, NpmRequest, NpmSkill, RemoteInstall, RemoteRequest, RemoteSkill, ResolvedOptions } from './types'
 import type { FilterSubject } from './utils/skills'
 import { realpathSync } from 'node:fs'
@@ -38,18 +38,24 @@ function isCliEntrypoint(): boolean {
   }
 }
 
-try {
-  cli
-    .command('', 'CLI to install agents skills that shipped with your installed npm packages')
+// Flag spellings follow `skills experimental_sync` so the same invocation works with both CLIs.
+function withSyncOptions(command: Command): Command {
+  return command
     .option('--cwd <cwd>', 'Current working directory')
-    .option('--agents, -a <agents>', 'Comma-separated list of agents to install to')
+    .option('--agents, --agent, -a <agents>', 'Comma-separated list of agents to install to')
     .option('--source, -s <source>', 'Source used to discover skills')
     .option('--recursive, -r', 'Scan recursively for monorepo packages')
-    .option('--yes', 'Skip confirmation prompts')
+    .option('--include <patterns>', 'Comma-separated package names or patterns to include')
+    .option('--exclude <patterns>', 'Comma-separated package names or patterns to exclude')
+    .option('--yes, -y', 'Skip confirmation prompts')
     .option('--dry-run', 'Show what would be done without making changes')
-    .option('--force', 'Force full reload, ignore cache')
+    .option('--force, -f', 'Force full reload, ignore cache')
     .option('--cleanup', 'Clean up stale skills-npm symlinks from agent directories (enabled by default; use --no-cleanup to disable)')
     .option('--remote', 'Fetch remote skills declared in "skills" fields (enabled by default; use --no-remote when offline)')
+}
+
+try {
+  withSyncOptions(cli.command('', 'CLI to install agents skills that shipped with your installed npm packages'))
     .action(async (options: Partial<CommandOptions>) => {
       if (isTTY) {
         printLogo()
@@ -60,17 +66,7 @@ try {
       await run(() => runSync(config))
     })
 
-  cli
-    .command('setup', 'Set up skills-npm in this project (prepare script + first sync)')
-    .option('--cwd <cwd>', 'Current working directory')
-    .option('--agents, -a <agents>', 'Comma-separated list of agents to install to')
-    .option('--source, -s <source>', 'Source used to discover skills')
-    .option('--recursive, -r', 'Scan recursively for monorepo packages')
-    .option('--yes', 'Skip confirmation prompts')
-    .option('--dry-run', 'Show what would be done without making changes')
-    .option('--force', 'Force full reload, ignore cache')
-    .option('--cleanup', 'Clean up stale skills-npm symlinks from agent directories (enabled by default; use --no-cleanup to disable)')
-    .option('--remote', 'Fetch remote skills declared in "skills" fields (enabled by default; use --no-remote when offline)')
+  withSyncOptions(cli.command('setup', 'Set up skills-npm in this project (prepare script + first sync)'))
     .action(async (options: Partial<CommandOptions>) => {
       if (isTTY) {
         printLogo()

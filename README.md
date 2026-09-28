@@ -195,9 +195,11 @@ Options:
   -s, --source <source>   Source to discover skills from (default: 'package.json')
   -a, --agents            Comma-separated list of agents to install to
   -r, --recursive         Scan recursively for monorepo packages
-  --yes                   Skip confirmation prompts
+  --include <patterns>    Comma-separated package names or patterns to include
+  --exclude <patterns>    Comma-separated package names or patterns to exclude
+  -y, --yes               Skip confirmation prompts
   --dry-run               Show what would be done without making changes
-  --force                 Force full reload, ignore cache and refetch remote skills
+  -f, --force             Force full reload, ignore cache and refetch remote skills
   --no-cleanup            Keep stale skills-npm symlinks and remote skills in agent directories
   --no-remote             Skip remote skills declared in "skills" fields (offline)
   -h, --help              Display help

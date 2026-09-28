@@ -1,4 +1,4 @@
-import type { AgentType, CommandOptions, ResolvedOptions } from './types'
+import type { AgentType, CommandOptions, FilterItem, ResolvedOptions } from './types'
 import process from 'node:process'
 import { toArray } from '@antfu/utils'
 import { createConfigLoader } from 'unconfig'
@@ -40,6 +40,14 @@ export async function resolveConfig(options: Partial<CommandOptions>): Promise<R
   merged.agents = toArray(merged.agents).flatMap(agent => agent.split(',')) as AgentType[]
   if ((merged.agents as string[]).includes('*'))
     merged.agents = getAllAgentTypes()
+  if (merged.include)
+    merged.include = splitFilterItems(merged.include)
+  merged.exclude = splitFilterItems(merged.exclude ?? [])
 
   return merged as ResolvedOptions
+}
+
+/** CLI flags arrive as comma-separated strings; config entries may be objects. */
+function splitFilterItems(items: FilterItem | FilterItem[]): FilterItem[] {
+  return toArray(items).flatMap((item): FilterItem[] => typeof item === 'string' ? item.split(',') : [item])
 }
