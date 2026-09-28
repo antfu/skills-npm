@@ -65,7 +65,7 @@ Not allowed:
 
 ### npm sources
 
-`npm:<package-name>` refers to the `skills/` directory of an installed npm package, resolved with Node module resolution starting from the **declaring** package. The declaring package SHOULD list `<package-name>` in its `dependencies` so that resolution succeeds for consumers.
+`npm:<package-name>` refers to the skills shipped inside an installed npm package (its `skills/` directory or equivalent), resolved with Node module resolution starting from the **declaring** package. The declaring package SHOULD list `<package-name>` in its `dependencies` so that resolution succeeds for consumers.
 
 This is the only prefix not delegated to the `skills` CLI: no network is involved; tools reuse whatever mechanism they already have for `skills/` directories.
 

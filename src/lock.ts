@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { sanitizeSkillName } from './utils/package'
 
 export const SKILLS_NPM_LOCK_FILE = 'skills-npm-lock.json'
-export const SKILLS_NPM_LOCK_VERSION = 2
+export const SKILLS_NPM_LOCK_VERSION = 3
 
 /**
  * The vercel-labs/skills CLI's committed lock file. Read-only for us: names
@@ -56,7 +56,8 @@ export function createSkillsLock(skills: NpmSkill[], remote: RemoteSkill[] = [])
     version: SKILLS_NPM_LOCK_VERSION,
     skills: sortedEntries(skills, s => s.targetName, s => ({
       package: s.packageName,
-      skillFolder: s.skillName,
+      ...(s.packageVersion ? { version: s.packageVersion } : {}),
+      skillPath: s.skillFile,
       ...(s.via ? { via: s.via } : {}),
     })),
   }

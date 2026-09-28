@@ -12,7 +12,7 @@ const LOCK_FILE_PATH = 'node_modules/.skills-npm/cache.json'
  * `npm-*` scheme to sanitized skill names; v3 records the scan options), so
  * stale caches from older versions are discarded.
  */
-export const CACHE_VERSION = 3
+export const CACHE_VERSION = 4
 
 export async function readCache(cwd: string): Promise<SkillsNpmCache | null> {
   try {

@@ -1,9 +1,10 @@
 {
-  "version": 2,
+  "version": 3,
   "skills": {
     "slidev": {
       "package": "@slidev/cli",
-      "skillFolder": "slidev"
+      "version": "53.0.0",
+      "skillPath": "skills/slidev/SKILL.md"
     }
   }
 }

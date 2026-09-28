@@ -22,6 +22,7 @@ function npmSkill(packageName: string, skillFolder: string, targetName: string, 
     packageName,
     skillName: skillFolder,
     skillPath,
+    skillFile: `skills/${skillFolder}/SKILL.md`,
     targetName,
     name: targetName,
     description: 'desc',
@@ -37,16 +38,18 @@ afterEach(async () => {
 })
 
 describe('isManagedTarget', () => {
-  it('matches skill directories inside node_modules', () => {
+  it('matches any target inside node_modules', () => {
     expect(isManagedTarget('/proj/node_modules/pkg/skills/foo')).toBe(true)
-    expect(isManagedTarget('/proj/node_modules/@scope/pkg/skills/foo')).toBe(true)
-    expect(isManagedTarget('/proj/node_modules/.pnpm/pkg@1/node_modules/pkg/skills/foo')).toBe(true)
+    expect(isManagedTarget('/proj/node_modules/@scope/pkg/dist/skills/foo')).toBe(true)
+    expect(isManagedTarget('/proj/node_modules/.pnpm/pkg@1/node_modules/pkg/.agents/skills/foo')).toBe(true)
+    // single-skill package: the target is the package root itself
+    expect(isManagedTarget('/proj/node_modules/pkg')).toBe(true)
   })
 
-  it('rejects other paths', () => {
+  it('rejects targets outside node_modules', () => {
     expect(isManagedTarget('/proj/.agents/skills/foo')).toBe(false)
-    expect(isManagedTarget('/proj/node_modules/pkg/lib/foo')).toBe(false)
     expect(isManagedTarget('/proj/skills/foo')).toBe(false)
+    expect(isManagedTarget('/proj/node_modules')).toBe(false)
   })
 })
 

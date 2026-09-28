@@ -60,13 +60,13 @@ describe('hasValidSkillMd', () => {
 })
 
 const mockSkills: NpmSkill[] = [
-  { packageName: 'pkg-a', skillName: 'skill1', skillPath: '/a/skill1', targetName: 'skill-1', name: 'Skill 1', description: 'Desc 1' },
-  { packageName: 'pkg-a', skillName: 'skill2', skillPath: '/a/skill2', targetName: 'skill-2', name: 'Skill 2', description: 'Desc 2' },
-  { packageName: 'pkg-b', skillName: 'skill3', skillPath: '/b/skill3', targetName: 'skill-3', name: 'Skill 3', description: 'Desc 3' },
-  { packageName: '@some/foo', skillName: 'integration', skillPath: '/some/foo/integration', targetName: 'foo-integration', name: 'Foo Integration', description: 'Desc 4' },
-  { packageName: '@some/foo', skillName: 'guide', skillPath: '/some/foo/guide', targetName: 'foo-guide', name: 'Foo Guide', description: 'Desc 5' },
-  { packageName: '@some/bar', skillName: 'integration', skillPath: '/some/bar/integration', targetName: 'bar-integration', name: 'Bar Integration', description: 'Desc 6' },
-  { packageName: 'pkg-c', skillName: 'skill4', skillPath: '/c/skill4', targetName: 'skill-4', name: 'Skill 4', description: 'Desc 4' },
+  { packageName: 'pkg-a', skillName: 'skill1', skillPath: '/a/skill1', skillFile: 'skills/skill1/SKILL.md', targetName: 'skill-1', name: 'Skill 1', description: 'Desc 1' },
+  { packageName: 'pkg-a', skillName: 'skill2', skillPath: '/a/skill2', skillFile: 'skills/skill2/SKILL.md', targetName: 'skill-2', name: 'Skill 2', description: 'Desc 2' },
+  { packageName: 'pkg-b', skillName: 'skill3', skillPath: '/b/skill3', skillFile: 'skills/skill3/SKILL.md', targetName: 'skill-3', name: 'Skill 3', description: 'Desc 3' },
+  { packageName: '@some/foo', skillName: 'integration', skillPath: '/some/foo/integration', skillFile: 'skills/integration/SKILL.md', targetName: 'foo-integration', name: 'Foo Integration', description: 'Desc 4' },
+  { packageName: '@some/foo', skillName: 'guide', skillPath: '/some/foo/guide', skillFile: 'skills/guide/SKILL.md', targetName: 'foo-guide', name: 'Foo Guide', description: 'Desc 5' },
+  { packageName: '@some/bar', skillName: 'integration', skillPath: '/some/bar/integration', skillFile: 'skills/integration/SKILL.md', targetName: 'bar-integration', name: 'Bar Integration', description: 'Desc 6' },
+  { packageName: 'pkg-c', skillName: 'skill4', skillPath: '/c/skill4', skillFile: 'skills/skill4/SKILL.md', targetName: 'skill-4', name: 'Skill 4', description: 'Desc 4' },
 ]
 
 describe('filterSkills', () => {

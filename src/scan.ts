@@ -165,50 +165,73 @@ export async function scanCurrentNodeModules(cwd: string, source: ScanOptions['s
   }
 }
 
+/**
+ * Where a package may ship skills, mirroring `skills experimental_sync`: a
+ * single-skill package has `SKILL.md` at its root; otherwise each skill is a
+ * subdirectory of one of these folders. A skill name seen in an earlier folder
+ * wins over the same name in a later one (source vs. built copies).
+ */
+const SKILL_DIRS = ['skills', 'dist/skills', '.agents/skills']
+
 export async function scanPackageForSkills(packagePath: string, packageName: string): Promise<{ skills: NpmSkill[], skillsInvalid: SkillInvalidInfo[] }> {
   const skills: NpmSkill[] = []
   const skillsInvalid: SkillInvalidInfo[] = []
-  const skillsDir = join(packagePath, 'skills')
+  let packageVersion: string | undefined
 
-  try {
-    const skillsDirStats = await stat(skillsDir)
-    if (!skillsDirStats.isDirectory())
-      return { skills, skillsInvalid }
+  // `folder` is undefined for a root SKILL.md, which has no directory of its own
+  const visit = async (skillPath: string, skillFile: string, folder?: string): Promise<void> => {
+    const skillInfo = await hasValidSkillMd(skillPath)
+    packageVersion ??= await getPackageVersion(packageName, packagePath)
 
-    const entries = await readdir(skillsDir, { withFileTypes: true })
-    const packageVersion = await getPackageVersion(packageName, packagePath)
+    if (!skillInfo.valid) {
+      skillsInvalid.push({ packageName, packageVersion, skillName: folder ?? skillFile, error: skillInfo.error || 'unknown_error' })
+      return
+    }
+
+    const targetName = sanitizeSkillName(skillInfo.name!)
+    if (skills.some(skill => skill.targetName === targetName))
+      return
+
+    skills.push({
+      packageName,
+      packageVersion,
+      skillName: folder ?? targetName,
+      skillPath,
+      skillFile,
+      targetName,
+      name: skillInfo.name!,
+      description: skillInfo.description!,
+    })
+  }
+
+  if (await isFile(join(packagePath, 'SKILL.md'))) {
+    await visit(packagePath, 'SKILL.md')
+    return { skills, skillsInvalid }
+  }
+
+  for (const dir of SKILL_DIRS) {
+    let entries
+    try {
+      entries = await readdir(join(packagePath, dir), { withFileTypes: true })
+    }
+    catch {
+      continue
+    }
 
     for (const entry of entries) {
-      if (!entry.isDirectory())
-        continue
-
-      const skillPath = join(skillsDir, entry.name)
-      const skillInfo = await hasValidSkillMd(skillPath)
-
-      if (skillInfo.valid) {
-        skills.push({
-          packageName,
-          packageVersion,
-          skillName: entry.name,
-          skillPath,
-          targetName: sanitizeSkillName(skillInfo.name!),
-          name: skillInfo.name!,
-          description: skillInfo.description!,
-        })
-      }
-      else {
-        skillsInvalid.push({
-          packageName,
-          packageVersion,
-          skillName: entry.name,
-          error: skillInfo.error || 'unknown_error',
-        })
-      }
+      if (entry.isDirectory())
+        await visit(join(packagePath, dir, entry.name), `${dir}/${entry.name}/SKILL.md`, entry.name)
     }
-  }
-  catch {
-    // The skills/ directory doesn't exist or isn't readable
   }
 
   return { skills, skillsInvalid }
+}
+
+async function isFile(path: string): Promise<boolean> {
+  try {
+    return (await stat(path)).isFile()
+  }
+  catch {
+    return false
+  }
 }

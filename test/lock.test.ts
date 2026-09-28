@@ -10,6 +10,7 @@ function skill(packageName: string, skillName: string, targetName: string): NpmS
     packageName,
     skillName,
     skillPath: `/nm/${packageName}/skills/${skillName}`,
+    skillFile: `skills/${skillName}/SKILL.md`,
     targetName,
     name: targetName,
     description: 'desc',
@@ -54,10 +55,10 @@ describe('writeSkillsLock', () => {
 
     const lock = JSON.parse(await readFile(join(dir, SKILLS_NPM_LOCK_FILE), 'utf-8'))
     expect(lock).toEqual({
-      version: 2,
+      version: 3,
       skills: {
-        alpha: { package: '@scope/pkg-a', skillFolder: 'alpha-folder' },
-        zeta: { package: 'pkg-b', skillFolder: 'zeta' },
+        alpha: { package: '@scope/pkg-a', skillPath: 'skills/alpha-folder/SKILL.md' },
+        zeta: { package: 'pkg-b', skillPath: 'skills/zeta/SKILL.md' },
       },
     })
     expect(Object.keys(lock.skills)).toEqual(['alpha', 'zeta'])
@@ -79,13 +80,18 @@ describe('writeSkillsLock', () => {
 describe('createSkillsLock', () => {
   it('keys entries by target name', () => {
     const lock = createSkillsLock([skill('pkg-a', 'folder-name', 'display-name')])
-    expect(lock.skills['display-name']).toEqual({ package: 'pkg-a', skillFolder: 'folder-name' })
+    expect(lock.skills['display-name']).toEqual({ package: 'pkg-a', skillPath: 'skills/folder-name/SKILL.md' })
     expect(lock).not.toHaveProperty('remote')
   })
 
   it('records which pack requested an npm: skill', () => {
     const lock = createSkillsLock([{ ...skill('@vueuse/skills', 'vueuse', 'vueuse'), via: '@acme/pack' }])
-    expect(lock.skills.vueuse).toEqual({ package: '@vueuse/skills', skillFolder: 'vueuse', via: '@acme/pack' })
+    expect(lock.skills.vueuse).toEqual({ package: '@vueuse/skills', skillPath: 'skills/vueuse/SKILL.md', via: '@acme/pack' })
+  })
+
+  it('records the installed package version when known', () => {
+    const lock = createSkillsLock([{ ...skill('pkg-a', 'alpha', 'alpha'), packageVersion: '1.2.3' }])
+    expect(lock.skills.alpha).toEqual({ package: 'pkg-a', version: '1.2.3', skillPath: 'skills/alpha/SKILL.md' })
   })
 
   it('records remote skills sorted by name with their requesting package', () => {

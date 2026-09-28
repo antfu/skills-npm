@@ -47,3 +47,43 @@ describe('scanCurrentNodeModules - source option', () => {
     expect(skillC).toBeUndefined()
   })
 })
+
+describe('scanPackageForSkills - skill locations', () => {
+  const skillLocationsPath = join(fixturesDir, 'skill-locations')
+
+  it('discovers skills at the package root, in dist/skills and in .agents/skills', async () => {
+    const result = await scanCurrentNodeModules(skillLocationsPath, 'node_modules')
+
+    expect(result.skills.map(s => [s.packageName, s.skillName, s.skillFile]).sort()).toEqual([
+      ['agents-dir-pkg', 'canonical', '.agents/skills/canonical/SKILL.md'],
+      ['dist-pkg', 'built', 'dist/skills/built/SKILL.md'],
+      ['dup-pkg', 'shared', 'skills/shared/SKILL.md'],
+      ['root-skill-pkg', 'root-skill', 'SKILL.md'],
+    ])
+  })
+
+  it('treats a root SKILL.md as the whole package and links the package directory', async () => {
+    const result = await scanCurrentNodeModules(skillLocationsPath, 'node_modules')
+    const root = result.skills.find(s => s.packageName === 'root-skill-pkg')
+
+    expect(root?.targetName).toBe('root-skill')
+    expect(root?.skillPath).toBe(join(skillLocationsPath, 'node_modules', 'root-skill-pkg'))
+    expect(root?.packageVersion).toBe('2.0.0')
+  })
+
+  it('prefers skills/ over dist/skills for the same skill name', async () => {
+    const result = await scanCurrentNodeModules(skillLocationsPath, 'node_modules')
+    const shared = result.skills.filter(s => s.targetName === 'shared-skill')
+
+    expect(shared).toHaveLength(1)
+    expect(shared[0].description).toBe('Source copy')
+  })
+
+  it('reports an invalid root SKILL.md', async () => {
+    const result = await scanCurrentNodeModules(skillLocationsPath, 'node_modules')
+
+    expect(result.skillsInvalid).toEqual([
+      { packageName: 'bad-root-pkg', packageVersion: '1.0.0', skillName: 'SKILL.md', error: 'missing_fields' },
+    ])
+  })
+})

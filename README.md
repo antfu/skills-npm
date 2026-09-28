@@ -86,10 +86,10 @@ Each sync writes `skills-npm-lock.json` in your project root: a committed manife
 
 ```json
 {
-  "version": 2,
+  "version": 3,
   "skills": {
-    "presenter-mode": { "package": "@slidev/cli", "skillFolder": "presenter-mode" },
-    "vueuse-functions": { "package": "@vueuse/skills", "skillFolder": "vueuse-functions", "via": "@acme/frontend-skills" }
+    "presenter-mode": { "package": "@slidev/cli", "version": "52.1.0", "skillPath": "skills/presenter-mode/SKILL.md" },
+    "vueuse-functions": { "package": "@vueuse/skills", "version": "1.3.0", "skillPath": "skills/vueuse-functions/SKILL.md", "via": "@acme/frontend-skills" }
   },
   "remote": {
     "web-design-guidelines": { "package": "@acme/frontend-skills", "source": "vercel-labs/agent-skills", "ref": "v1.4.0" }
@@ -97,7 +97,7 @@ Each sync writes `skills-npm-lock.json` in your project root: a committed manife
 }
 ```
 
-It records *what* is installed and *who asked for it*, not *where*; agent directories are derived per machine, mirroring how the `skills` CLI keeps agent selection out of its committed lock. `via` marks a shipped skill that is only installed because a pack requested it with `npm:`; `remote` lists the skills fetched on behalf of a `skills` field. Skill versions are pinned by your package manager's lock file and by `skills-lock.json` respectively.
+It records *what* is installed and *who asked for it*, not *where*; agent directories are derived per machine, mirroring how the `skills` CLI keeps agent selection out of its committed lock. `skillPath` locates the skill inside the package the same way `skills-lock.json` does; `version` is the installed package version, for readers of the lock (your package manager's lock file remains the source of truth). `via` marks a shipped skill that is only installed because a pack requested it with `npm:`; `remote` lists the skills fetched on behalf of a `skills` field.
 
 ## Conflicts
 
@@ -109,7 +109,11 @@ When the same skill name comes from more than one place, skills-npm applies this
 4. **Direct beats transitive** - a skill from a direct dependency beats the same name from a transitive one; identical remote requests from several packages count as one.
 5. **Ties are skipped** - if two direct (or only transitive) dependencies collide, all contenders are skipped with a warning; resolve with `include`/`exclude`.
 
-Cleanup only ever removes symlinks that point into `node_modules` skill directories and remote skills recorded in `skills-npm-lock.json`, so nothing else in your agent directories is at risk.
+Cleanup only ever removes symlinks that point into `node_modules` and remote skills recorded in `skills-npm-lock.json`, so nothing else in your agent directories is at risk.
+
+## Migrating from v3
+
+`skills-npm-lock.json` moves to version 3: each entry's `skillFolder` becomes `skillPath` (the path to `SKILL.md` inside the package, as in `skills-lock.json`) and gains the installed package `version`. It is rewritten on the first sync. Packages are now also scanned for a root `SKILL.md`, `dist/skills/` and `.agents/skills/`, so a few more skills may appear.
 
 ## Migrating from v2
 
@@ -227,6 +231,8 @@ my-tool/
     └── my-skill/
         └── SKILL.md
 ```
+
+`dist/skills/` and `.agents/skills/` are scanned too, and a package that *is* a single skill can put `SKILL.md` at its root. These are the same locations `skills experimental_sync` looks in.
 
 Curate skills you don't own in a `skills` field. A skills pack is just a package with that field and nothing else:
 

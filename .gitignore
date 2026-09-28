@@ -9,6 +9,7 @@ lib-cov
 logs
 node_modules
 !test/fixtures/**/node_modules
+!test/fixtures/**/dist
 temp
 
 # Agent skills from npm packages (managed by skills-npm)

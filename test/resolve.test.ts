@@ -7,6 +7,7 @@ function skill(packageName: string, targetName: string): NpmSkill {
     packageName,
     skillName: targetName,
     skillPath: `/nm/${packageName}/skills/${targetName}`,
+    skillFile: `skills/${targetName}/SKILL.md`,
     targetName,
     name: targetName,
     description: 'desc',

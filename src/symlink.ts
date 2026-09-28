@@ -12,15 +12,14 @@ import { agents, getDetectedAgents } from './agents'
 import { isWindows } from './constants'
 import { searchForWorkspaceRoot } from './utils'
 
-const MANAGED_TARGET_RE = /[\\/]node_modules[\\/].+[\\/]skills[\\/][^\\/]+[\\/]?$/
-
 /**
- * Whether a symlink target is one skills-npm manages: a skill directory inside
- * node_modules. Ownership is derived from the target, not from the link name,
- * so committed links survive clones and no bookkeeping prefix is needed.
+ * Whether a symlink target is one skills-npm manages: anything inside
+ * node_modules, since only we link agent skill directories there. Ownership is
+ * derived from the target, not from the link name, so committed links survive
+ * clones and no bookkeeping prefix is needed.
  */
 export function isManagedTarget(resolvedTarget: string): boolean {
-  return MANAGED_TARGET_RE.test(resolvedTarget)
+  return /[\\/]node_modules[\\/]/.test(resolvedTarget)
 }
 
 type LinkOutcome

@@ -56,11 +56,16 @@ Each subdirectory under `skills/` represents a single skill and must contain a `
 
 ### Discovery Pattern
 
-`skills-npm` discovers skills by scanning:
+`skills-npm` discovers skills by scanning, for each honored package:
 
 ```
-node_modules/**/skills/*/SKILL.md
+node_modules/<pkg>/SKILL.md                  # a package that is a single skill
+node_modules/<pkg>/skills/*/SKILL.md
+node_modules/<pkg>/dist/skills/*/SKILL.md
+node_modules/<pkg>/.agents/skills/*/SKILL.md
 ```
+
+A root `SKILL.md` makes the package itself the skill and ends the scan for that package. These are the locations the `skills` CLI's `experimental_sync` command honors, so a package works with both tools.
 
 By default only the project's direct dependencies are honored; scanning every hoisted package is opt-in. In monorepo setups, use the `--recursive` flag to scan all workspace packages for skills.
 

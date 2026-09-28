@@ -85,13 +85,19 @@ export interface NpmSkill {
    */
   packageVersion?: string
   /**
-   * Skill directory name inside the package's skills/ folder
+   * Skill directory name inside the package's skills folder; the sanitized
+   * skill name for a package whose SKILL.md sits at its root
    */
   skillName: string
   /**
    * Absolute path to the skill directory
    */
   skillPath: string
+  /**
+   * Path to SKILL.md relative to the package root, posix separators
+   * (e.g. "skills/foo/SKILL.md", "SKILL.md")
+   */
+  skillFile: string
   /**
    * Symlink name: the frontmatter `name` sanitized the same way the
    * vercel-labs/skills CLI sanitizes install names (e.g., "presenter-mode")
@@ -339,9 +345,14 @@ export interface SkillsNpmLockEntry {
    */
   package: string
   /**
-   * Skill directory name inside the package's skills/ folder
+   * Installed version of that package, when its package.json declares one
    */
-  skillFolder: string
+  version?: string
+  /**
+   * Path to SKILL.md relative to the package root, as the `skills` CLI
+   * records it in `skills-lock.json` (e.g. "skills/foo/SKILL.md")
+   */
+  skillPath: string
   /**
    * Package whose `skills` field requested it via `npm:`, when that is the
    * only reason it is installed
