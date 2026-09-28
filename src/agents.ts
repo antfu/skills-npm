@@ -36,7 +36,7 @@ const AGENT_COMMANDS: Partial<Record<AgentType, string[]>> = {
   'iflow-cli': ['iflow'],
   'junie': ['junie'],
   'kilo': ['kilocode'],
-  'kimi-cli': ['kimi'],
+  'kimi-code-cli': ['kimi'],
   'kiro-cli': ['kiro'],
   'kode': ['kode'],
   'neovate': ['neovate'],
