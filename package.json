@@ -52,6 +52,7 @@
   },
   "dependencies": {
     "@clack/prompts": "catalog:prod",
+    "@vercel/detect-agent": "catalog:prod",
     "cac": "catalog:prod",
     "picocolors": "catalog:prod",
     "skills": "catalog:prod",

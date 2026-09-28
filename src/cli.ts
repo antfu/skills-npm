@@ -11,7 +11,11 @@ import * as p from '@clack/prompts'
 import { cac } from 'cac'
 import c from 'picocolors'
 import { name, version } from '../package.json'
-import { agents, getAllAgentTypes, getDetectedAgents } from './agents'
+import { getNonUniversalAgents, getUniversalAgents, getVisibleUniversalAgents } from '../vendor/skills/src/agents'
+import { detectAgent, getAgentType } from '../vendor/skills/src/detect-agent'
+import { searchMultiselect } from '../vendor/skills/src/prompts/search-multiselect'
+import { getLastSelectedAgents, saveSelectedAgents } from '../vendor/skills/src/skill-lock'
+import { agents, getAllAgentTypes, getDetectedAgents, withUniversalAgent } from './agents'
 import { resolveConfig } from './config'
 import { isCI, isTTY, LEGACY_GITIGNORE_PATTERNS } from './constants'
 import { readSkillsFieldRequests, resolveNpmRequests } from './field'
@@ -239,11 +243,73 @@ async function scanSkills(options: ResolvedOptions): Promise<{ skills: NpmSkill[
   return { skills, remote }
 }
 
+/**
+ * Inside an AI agent there is nobody to answer prompts: run non-interactively
+ * and, unless agents were chosen explicitly, target the agent we run in.
+ */
+async function adoptRunningAgent(options: ResolvedOptions): Promise<ResolvedOptions> {
+  const running = await detectAgent()
+  if (!running.isAgent)
+    return options
+
+  const type = getAgentType(running.agent.name)
+  const message = `${running.agent.name} detected, running non-interactively`
+  if (isTTY)
+    p.log.info(message)
+  else
+    console.log(message)
+
+  return {
+    ...options,
+    yes: true,
+    agents: options.agents.length > 0 || !type ? options.agents : [type],
+  }
+}
+
+async function promptAgents(detectedAgents: AgentType[]): Promise<AgentType[]> {
+  const universalAgents = getUniversalAgents()
+  const visibleUniversalAgents = getVisibleUniversalAgents()
+  const otherAgents = getNonUniversalAgents()
+  const remembered: string[] = await getLastSelectedAgents().catch(() => undefined) ?? detectedAgents
+  const initialSelected = otherAgents.filter(agent => remembered.includes(agent))
+
+  // Detected agents first so they are visible without searching
+  const orderedAgents = [
+    ...otherAgents.filter(agent => detectedAgents.includes(agent)),
+    ...otherAgents.filter(agent => !detectedAgents.includes(agent)),
+  ]
+
+  const selected = await searchMultiselect<AgentType>({
+    message: 'Which agents do you want to install to?',
+    items: orderedAgents.map(agent => ({
+      value: agent,
+      label: agents[agent].displayName,
+      hint: agents[agent].skillsDir,
+    })),
+    initialSelected,
+    lockedSection: {
+      title: 'Universal (.agents/skills)',
+      items: visibleUniversalAgents.map(agent => ({ value: agent, label: agents[agent].displayName })),
+      hiddenCount: universalAgents.length - visibleUniversalAgents.length,
+    },
+  })
+
+  if (typeof selected === 'symbol') {
+    p.outro(c.red('Operation cancelled'))
+    process.exit(0)
+  }
+
+  // Same memory the `skills` CLI reads, so both tools pre-select alike
+  await saveSelectedAgents(selected).catch(() => {})
+
+  return selected.filter(agent => otherAgents.includes(agent))
+}
+
 async function getTargetAgents(options: ResolvedOptions): Promise<AgentType[]> {
   let targetAgents: AgentType[]
 
-  if (options.agents && options.agents.length > 0) {
-    targetAgents = options.agents as AgentType[]
+  if (options.agents.length > 0) {
+    targetAgents = options.agents
   }
   else {
     const detectedAgents = await getDetectedAgents()
@@ -257,40 +323,14 @@ async function getTargetAgents(options: ResolvedOptions): Promise<AgentType[]> {
     }
 
     if (isTTY) {
-      const allAgents = getAllAgentTypes()
-
-      if (options.yes) {
-        targetAgents = detectedAgents.length > 0 ? detectedAgents : allAgents
-      }
-      else {
-        // Offer every agent, with detected ones pre-selected and listed first,
-        // so you can both deselect detected agents and add undetected ones.
-        const orderedAgents = [
-          ...detectedAgents,
-          ...allAgents.filter(agent => !detectedAgents.includes(agent)),
-        ]
-        const selected = await p.multiselect<string>({
-          message: detectedAgents.length > 0
-            ? 'Select agents to install to:'
-            : 'No agents detected. Select agents to install to:',
-          options: orderedAgents
-            .map(agent => ({
-              value: agent,
-              label: agents[agent].displayName,
-            })),
-          required: true,
-          initialValues: detectedAgents.length > 0 ? detectedAgents : undefined,
-        })
-
-        if (p.isCancel(selected)) {
-          p.outro(c.red('Operation cancelled'))
-          process.exit(0)
-        }
-
-        targetAgents = selected as AgentType[]
-      }
+      if (options.yes)
+        targetAgents = detectedAgents.length > 0 ? detectedAgents : getAllAgentTypes()
+      else
+        targetAgents = await promptAgents(detectedAgents)
     }
   }
+
+  targetAgents = withUniversalAgent(targetAgents)
 
   const message = `Target agents: ${c.cyan(targetAgents.join(', '))}`
   if (isTTY)
@@ -459,7 +499,8 @@ async function executeRemoteSync(sync: RemoteSync, agents: AgentType[], options:
   }
 }
 
-async function runSync(config: ResolvedOptions): Promise<void> {
+async function runSync(options: ResolvedOptions): Promise<void> {
+  const config = await adoptRunningAgent(options)
   const { skills, remote: requests } = await scanSkills(config)
 
   const [vercelLockNames, directDeps] = await Promise.all([

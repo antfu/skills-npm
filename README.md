@@ -213,7 +213,11 @@ When `agents` is not set, `skills-npm` auto-detects which coding agents you use 
 
 The command check is conservative: only agents with an unambiguous CLI name are probed, so generic names and GUI-only editors are matched by the directory check alone.
 
-In an interactive terminal, the prompt lists **all** agents with the detected ones pre-selected, so you can add or remove any. Non-interactively (e.g. from the `prepare` hook), the detected set is used directly. Pass `--agents` (or set `agents` in the config) to bypass detection entirely.
+In an interactive terminal, the prompt is the same one `npx skills add` shows: every agent is searchable, your last selection (shared with the `skills` CLI) or, failing that, the detected agents are pre-selected. Non-interactively (e.g. from the `prepare` hook), the detected set is used directly. Pass `--agents` (or set `agents` in the config) to bypass detection entirely.
+
+Whatever you pick, `.agents/skills` is always linked: it is the shared directory read by every agent using the universal layout (Cursor, Codex, OpenCode, Amp, ...), so the committed links work for teammates on any agent.
+
+When skills-npm itself runs inside a coding agent (Claude Code, Cursor, Codex, ...), it skips all prompts and targets that agent unless `agents` is set explicitly.
 
 ## For Package Authors
 

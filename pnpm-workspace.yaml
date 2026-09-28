@@ -49,6 +49,7 @@ catalogs:
     '@antfu/utils': ^9.3.0
   prod:
     '@clack/prompts': ^1.8.1
+    '@vercel/detect-agent': ^1.2.1
     cac: ^7.0.0
     picocolors: ^1.1.1
     skills: ^1.7.0

@@ -44,5 +44,6 @@
   symlinkSkill: function
   symlinkSkills: function
   VERCEL_LOCK_FILE: string
+  withUniversalAgent: function
   writeSkillsLock: function
 ./cli: {}

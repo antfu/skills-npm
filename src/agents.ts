@@ -1,7 +1,7 @@
 import type { AgentType } from './types'
 import type { CommandProbeOptions } from './utils/command'
 
-import { agents, detectInstalledAgents } from '../vendor/skills/src/agents'
+import { agents, detectInstalledAgents, isUniversalAgent } from '../vendor/skills/src/agents'
 import { isCommandAvailable } from './utils/command'
 
 export { agents, detectInstalledAgents } from '../vendor/skills/src/agents'
@@ -76,4 +76,13 @@ export async function getDetectedAgents(): Promise<AgentType[]> {
 
 export function getAllAgentTypes(): AgentType[] {
   return Object.keys(agents) as AgentType[]
+}
+
+/**
+ * `.agents/skills` is read by every agent using the universal layout, so it is
+ * always linked (as the `skills` CLI does). One entry per directory is enough:
+ * a selected universal agent already covers it.
+ */
+export function withUniversalAgent(selected: AgentType[]): AgentType[] {
+  return selected.some(isUniversalAgent) ? selected : [...selected, 'universal']
 }

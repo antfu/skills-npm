@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 import { describe, expect, it } from 'vitest'
-import { detectAgentsByCommand } from '../src/agents'
+import { detectAgentsByCommand, withUniversalAgent } from '../src/agents'
 import { isCommandAvailable } from '../src/utils/command'
 
 // PATH strings and expected candidate paths are built with node:path's `join`
@@ -167,5 +167,16 @@ describe('detectAgentsByCommand', () => {
       isExecutableFile: async () => false,
     })
     expect(detected).toEqual([])
+  })
+})
+
+describe('withUniversalAgent', () => {
+  it('adds the shared .agents/skills target when no selected agent reads it', () => {
+    expect(withUniversalAgent(['claude-code'])).toEqual(['claude-code', 'universal'])
+    expect(withUniversalAgent([])).toEqual(['universal'])
+  })
+
+  it('leaves the selection alone when a universal agent is already in it', () => {
+    expect(withUniversalAgent(['claude-code', 'opencode'])).toEqual(['claude-code', 'opencode'])
   })
 })
