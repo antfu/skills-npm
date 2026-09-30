@@ -469,6 +469,10 @@ async function planRemoteSync(requests: RemoteRequest[], vendored: NpmSkill[], v
     && !plan.installs.some(i => i.skills.length === 0 && sourceKey(i) === sourceKey(previous[name])),
   )
 
+  // Keep ownership of retained files so a later sync can still remove them.
+  if (options.cleanup === false)
+    plan.installed.push(...stale.map(name => ({ name, ...previous[name] })))
+
   return { installs: plan.installs, installed: plan.installed, stale }
 }
 
