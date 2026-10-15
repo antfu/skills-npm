@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import type { AgentType, CleanupResult, NpmSkill, RemoteInstall, ResolvedOptions, SetupResult, SkillInvalidInfo, SkippedRemote, SkippedSkill, SymlinkResult } from './types'
+import type { AgentType, CleanupResult, MigrateResult, NpmSkill, RemoteInstall, ResolvedOptions, SetupResult, SkillInvalidInfo, SkippedRemote, SkippedSkill, SymlinkResult } from './types'
 import * as p from '@clack/prompts'
 import c from 'picocolors'
 import { GRAYS, isTTY, LOGO_LINES, RESET } from './constants'
@@ -217,5 +217,31 @@ export function printSetupResults(result: SetupResult, options: ResolvedOptions)
   }
   else {
     console.log(prepareMsg)
+  }
+}
+
+export function printMigrateResults(result: MigrateResult, options: ResolvedOptions): void {
+  const dry = options.dryRun ? `${c.yellow('[Dry run]')} ` : ''
+  const changes = [
+    ...result.scripts.map(s => `${dry}Updated package.json "${s.name}" script: ${c.cyan(s.after)}`),
+    ...result.dependencyFields.map(field => `${dry}Replaced skills-npm with skills in package.json "${field}"`),
+    ...result.catalog ? [`${dry}Replaced skills-npm with skills in the pnpm "${result.catalog}" catalog`] : [],
+    ...result.lockRemoved ? [`${dry}Removed skills-npm-lock.json`] : [],
+  ]
+  const warnings = [
+    ...result.droppedFlags.map(flag => `Dropped ${c.yellow(flag)}: skills experimental_sync has no equivalent`),
+    ...result.configFiles.map(file => `${c.yellow(file)} is not read by skills experimental_sync; move its options to flags in the "prepare" script and delete it`),
+  ]
+  const next = changes.length > 0
+    ? 'Reinstall dependencies to fetch skills and run the new "prepare" script'
+    : 'Nothing to migrate: package.json does not reference skills-npm'
+
+  if (isTTY) {
+    changes.forEach(msg => p.log.success(msg))
+    warnings.forEach(msg => p.log.warn(msg))
+    p.outro(next)
+  }
+  else {
+    [...changes, ...warnings, next].forEach(msg => console.log(msg))
   }
 }

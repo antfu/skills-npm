@@ -1,8 +1,9 @@
 import type { ResolvedOptions, SetupResult } from './types'
 import { existsSync } from 'node:fs'
-import { readFile, writeFile } from 'node:fs/promises'
+import { writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import process from 'node:process'
+import { readPackageJson } from './package-json'
 import { searchForWorkspaceRoot } from './utils/index'
 
 /**
@@ -12,11 +13,7 @@ import { searchForWorkspaceRoot } from './utils/index'
  */
 const PREPARE_TOKEN = 'skills-npm'
 
-const INDENT_RE = /^[\t ]+/m
-const CRLF_RE = /\r\n/
-const TRAILING_NEWLINE_RE = /\n$/
 const WHITESPACE_RE = /\s+/
-const LF_GLOBAL_RE = /\n/g
 
 /**
  * Merge the skills-npm token into an existing `prepare` script.
@@ -42,11 +39,6 @@ export function mergePrepare(existing: string | undefined): string {
   return alreadyPresent ? trimmed : `${trimmed} && ${PREPARE_TOKEN}`
 }
 
-function detectIndent(source: string): string {
-  const match = source.match(INDENT_RE)
-  return match ? match[0] : '  '
-}
-
 /**
  * Add `skills-npm` to `scripts.prepare` in the given `package.json`, preserving
  * the file's indentation, newline style, trailing newline and leading BOM.
@@ -58,12 +50,8 @@ export async function wirePrepare(
   packageJsonPath: string,
   dryRun = false,
 ): Promise<SetupResult['prepare']> {
-  const raw = await readFile(packageJsonPath, 'utf-8')
-  const hasBom = raw.charCodeAt(0) === 0xFEFF
-  const source = hasBom ? raw.slice(1) : raw
-
-  const pkg = JSON.parse(source)
-  const before: string | undefined = pkg.scripts?.prepare
+  const { pkg, serialize } = await readPackageJson(packageJsonPath)
+  const before = pkg.scripts?.prepare
   const after = mergePrepare(before)
 
   if (after === before)
@@ -75,19 +63,7 @@ export async function wirePrepare(
   pkg.scripts ??= {}
   pkg.scripts.prepare = after
 
-  const indent = detectIndent(source)
-  const crlf = CRLF_RE.test(source)
-  const trailingNewline = TRAILING_NEWLINE_RE.test(source)
-
-  let output = JSON.stringify(pkg, null, indent)
-  if (crlf)
-    output = output.replace(LF_GLOBAL_RE, '\r\n')
-  if (trailingNewline)
-    output += crlf ? '\r\n' : '\n'
-  if (hasBom)
-    output = `\uFEFF${output}`
-
-  await writeFile(packageJsonPath, output, 'utf-8')
+  await writeFile(packageJsonPath, serialize(pkg), 'utf-8')
   return { changed: true, before, after }
 }
 
