@@ -20,7 +20,8 @@ import { resolveConfig } from './config'
 import { isCI, isTTY, LEGACY_GITIGNORE_PATTERNS } from './constants'
 import { readSkillsFieldRequests, resolveNpmRequests } from './field'
 import { readSkillsLock, readVercelLockNames, SKILLS_NPM_LOCK_FILE, writeSkillsLock } from './lock'
-import { printCleanupResults, printDryRun, printInvalidSkills, printLogo, printOutro, printRemotePlan, printSetupResults, printSkills, printSkippedRemote, printSkippedSkills, printSymlinkResults } from './printer'
+import { migrateProject } from './migrate'
+import { printCleanupResults, printDryRun, printInvalidSkills, printLogo, printMigrateResults, printOutro, printRemotePlan, printSetupResults, printSkills, printSkippedRemote, printSkippedSkills, printSymlinkResults } from './printer'
 import { installRemote, planRemote, removeRemote, runSkillsCli } from './remote'
 import { resolveConflicts } from './resolve'
 import { scanNodeModules } from './scan'
@@ -83,6 +84,19 @@ try {
         printSetupResults(result, config)
         await runSync(config)
       })
+    })
+
+  cli.command('migrate', 'Migrate this project from skills-npm to `skills experimental_sync`')
+    .option('--cwd <cwd>', 'Current working directory')
+    .option('--dry-run', 'Show what would be done without making changes')
+    .action(async (options: Partial<CommandOptions>) => {
+      if (isTTY) {
+        printLogo()
+        p.intro(`${c.inverse(`${name}@${version}`)}`)
+      }
+
+      const config = await resolveConfig(options)
+      await run(async () => printMigrateResults(await migrateProject(config), config))
     })
 
   cli.help()

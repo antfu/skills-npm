@@ -471,6 +471,34 @@ export interface FilterResult {
   excludedCount: number
 }
 
+export interface MigrateResult {
+  /**
+   * Absolute path to the package.json that was (or would be) edited
+   */
+  packageJsonPath: string
+  /**
+   * Scripts whose `skills-npm` command was replaced
+   */
+  scripts: { name: string, before: string, after: string }[]
+  /**
+   * Dependency fields where `skills-npm` was replaced by `skills`
+   */
+  dependencyFields: ('dependencies' | 'devDependencies')[]
+  /**
+   * pnpm catalog whose `skills-npm` entry was replaced
+   */
+  catalog?: string
+  lockRemoved: boolean
+  /**
+   * Script flags dropped because `skills experimental_sync` has no equivalent
+   */
+  droppedFlags: string[]
+  /**
+   * skills-npm config files, which `skills experimental_sync` does not read
+   */
+  configFiles: string[]
+}
+
 export interface SetupResult {
   /**
    * Absolute path to the package.json that was (or would be) edited

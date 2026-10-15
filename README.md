@@ -12,6 +12,8 @@
 > You can run it with `npx skills experimental_sync` to replace `npx skills-npm`.
 >
 > `skills-npm` will eventually be deprecated after the functionality is fully integrated into the `skills` CLI.
+>
+> Run `npx skills-npm migrate` to switch a project over. See [Migrating to `skills experimental_sync`](#migrating-to-skills-experimental_sync).
 
 A CLI that installs [agent skills](https://agentskills.io) through npm: it symlinks skills shipped inside your installed packages, and fetches the remote skills your packages declare in a `skills` field via the [`skills`](https://github.com/vercel-labs/skills) CLI.
 
@@ -118,6 +120,16 @@ When the same skill name comes from more than one place, skills-npm applies this
 
 Cleanup only ever removes symlinks that point into `node_modules` and remote skills recorded in `skills-npm-lock.json`, so nothing else in your agent directories is at risk.
 
+## Migrating to `skills experimental_sync`
+
+`npx skills-npm migrate` moves a project to the `skills` CLI:
+
+- Each `skills-npm` command in your `package.json` scripts becomes `skills experimental_sync -y`. Flags are carried over in their new spelling (`--agents a,b` becomes `-a a b`). Flags with no equivalent (`--force`, `--cwd`, `--source`) are dropped, with a warning.
+- The `skills-npm` dependency becomes `skills@^1.7.2`. If it uses a pnpm `catalog:` specifier, the entry in `pnpm-workspace.yaml` is renamed instead.
+- `skills-npm-lock.json` is deleted. `skills experimental_sync` records its skills in `skills-lock.json`.
+
+`skills experimental_sync` does not read `skills-npm.config.*`. If you have one, `migrate` warns about it: move its options to flags in the `prepare` script, then delete the file. Reinstall your dependencies afterwards to run the first sync. Use `--dry-run` to preview the changes.
+
 ## Migrating from v3
 
 `skills-npm-lock.json` moves to version 3: each entry's `skillFolder` becomes `skillPath` (the path to `SKILL.md` inside the package, as in `skills-lock.json`) and gains the installed package `version`. It is rewritten on the first sync. Packages are now also scanned for a root `SKILL.md`, `dist/skills/` and `.agents/skills/`, so a few more skills may appear.
@@ -200,6 +212,7 @@ export default defineConfig({
 ```bash
 skills-npm [options]          # discover and symlink skills (run by the prepare hook)
 skills-npm setup [options]    # add the prepare script, then run the first sync (run once)
+skills-npm migrate [options]  # switch the project to `skills experimental_sync` (accepts --cwd, --dry-run)
 
 Options:
   --cwd <cwd>             Current working directory
